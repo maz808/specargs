@@ -10,6 +10,7 @@ apispec = {extras = ["marshmallow", "yaml"], version = "^5.1.1"}
 Flask = "2.0.1"
 webargs = "^8.1.0"
 python-dotenv = "^0.19.2"
+apispec-webframeworks = "^0.5.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

@@ -20,6 +20,22 @@ validation = ["prance[osv] (>=0.11)"]
 yaml = ["PyYAML (>=3.10)"]
 
 [[package]]
+name = "apispec-webframeworks"
+version = "0.5.2"
+description = "Web framework plugins for apispec."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+apispec = {version = ">=2.0.0", extras = ["yaml"]}
+
+[package.extras]
+dev = ["pytest", "mock", "Flask (==1.1.1)", "tornado", "bottle (==0.12.17)", "flake8 (==3.7.9)", "flake8-bugbear (==19.8.0)", "pre-commit (>=1.18,<2.0)", "tox"]
+lint = ["flake8 (==3.7.9)", "flake8-bugbear (==19.8.0)", "pre-commit (>=1.18,<2.0)"]
+tests = ["pytest", "mock", "Flask (==1.1.1)", "tornado", "bottle (==0.12.17)"]
+
+[[package]]
 name = "atomicwrites"
 version = "1.4.0"
 description = "Atomic file writes."
@@ -253,12 +269,16 @@ watchdog = ["watchdog"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "e62943a6ad2bc1a570ee9eb2fa175d68337e01e6d67b3af7cb19e0d21f5e2e14"
+content-hash = "e7d7bf6a6918ec33dd846f8fe8f145fefc64421d469461ed918b59224bff6fc4"
 
 [metadata.files]
 apispec = [
     {file = "apispec-5.1.1-py3-none-any.whl", hash = "sha256:5bc5404b19259aeeb307ce9956e2c1a97722c6a130ef414671dfc21acd622afc"},
     {file = "apispec-5.1.1.tar.gz", hash = "sha256:d167890e37f14f3f26b588ff2598af35faa5c27612264ea1125509c8ff860834"},
+]
+apispec-webframeworks = [
+    {file = "apispec-webframeworks-0.5.2.tar.gz", hash = "sha256:0db35b267914b3f8c562aca0261957dbcb4176f255eacc22520277010818dcf3"},
+    {file = "apispec_webframeworks-0.5.2-py2.py3-none-any.whl", hash = "sha256:482c563abbcc2a261439476cb3f1a7c7284cc997c322c574d48c111643e9c04e"},
 ]
 atomicwrites = [
     {file = "atomicwrites-1.4.0-py2.py3-none-any.whl", hash = "sha256:6d1784dea7c0c8d4a5172b6c620f40b6e4cbfdf96d783691f2e1302a7b88e197"},
