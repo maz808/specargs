@@ -55,7 +55,7 @@ def _parameters_data_from_rule(rule: routing.Rule) -> list[dict]:
     return parameters
 
 
-def field2multipleOf(self, field, **kwargs):
+def field2multipleOf(_, field, **kwargs):
     """Return the dictionary of OpenAPI field attributes for a set of
     :class:`MultipleOf <apispec_webargs.MultipleOf>` validators.
 
@@ -67,18 +67,23 @@ def field2multipleOf(self, field, **kwargs):
         for validator in field.validators
         if isinstance(validator, MultipleOf)
     ]
-    # Remove any validators that contain a value that is a factor of any of the other validator values
-    validators = [
-        validator for validator in validators for other_validator in validators
+    if not validators: return {}
+    # Remove any validator values that are a factor of any of the other validator values
+    # TODO: Log suggestion to remove values found to be factors
+    relevant_values = (
+        validator.multiply for validator in validators for other_validator in validators
         if not any(other_validator.multiply % validator.multiply == 0)
-    ]
-    return {"multipleOf": math.prod(validator.multiply for validator in validators)}
+    )
+    return {"multipleOf": math.prod(relevant_values)}
 
 
 class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
     def __init__(self):
         super().__init__()
         self.rule_by_view = {}
+
+    def init_spec(self, spec):
+        super().init_spec(spec)
         self.converter.add_attribute_function(field2multipleOf)
 
     def path_helper(self, operations, parameters, *, view, app=None, **kwargs):
@@ -86,8 +91,20 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
         parameters.extend(_parameters_data_from_rule(rule))
         return super().path_helper(operations={}, view=view, app=app, **kwargs)
 
+    def _requestBody_from_schema(self, schema: Schema):
+        return {
+            "requestBody": {
+                "required": True,
+                "content": {
+                    "application/json": {
+                        "schema": self.converter.schema2jsonschema(schema)
+                    }
+                }
+            }
+        }
+
     def _operation_data_from_schema(self, schema: Schema, *, location: str):
-        return (self.converter.schema2jsonschema(schema) if location == "json" else
+        return (self._requestBody_from_schema(schema) if location == "json" else
             {"parameters": self.converter.schema2parameters(schema, location=location)})
 
     def _operation_data_from_argmap(self, argmap: ArgMap, *, location: str):
@@ -95,15 +112,16 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
             argmap = parser.schema_class.from_dict(argmap)()
         return self._operation_data_from_schema(argmap, location=location)
 
-    def operation_helper(self, operations, *, view, app=None, **kwargs):
+    def operation_helper(self, operations, *, view, **kwargs):
         """Path helper that allows passing a Flask view function."""
         rule = self.rule_by_view[view]
         if hasattr(view, "view_class") and issubclass(view.view_class, MethodView):
             for method in view.methods:
-                if method in rule.methods:
-                    method_name = method.lower()
-                    method = getattr(view.view_class, method_name)
-                    operations.setdefault(method_name, {})
+                if method not in rule.methods: continue
+                method_name = method.lower()
+                method = getattr(view.view_class, method_name)
+                operations.setdefault(method_name, {})
+                for args, kwargs in method.webargs:
                     operations[method_name].update(
-                        self._operation_data_from_argmap(method.args_[0], location=method.kwargs_["location"])
+                        self._operation_data_from_argmap(args[0], location=kwargs["location"])
                     )

@@ -13,6 +13,12 @@ class ExamplesView(MethodView):
         print(kwargs)
         return "EXAMPLES!"
 
+    @use_kwargs({"test": fields.String()}, location = "query")
+    @use_kwargs({"name": fields.String(), "color": fields.String(), "age": fields.Integer()})
+    def post(self, **kwargs):
+        print(kwargs)
+        return "EXAMPLE POSTED!"
+
 
 examples_blueprint = Blueprint("examples-api", __name__, url_prefix="/examples")
 examples_blueprint.add_url_rule("", view_func=ExamplesView.as_view("examples"))

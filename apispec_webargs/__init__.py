@@ -31,11 +31,11 @@ from webargs import validate
 
 
 def use_args(*args, **kwargs):
-    from webargs.flaskparser import use_args
+    from webargs.flaskparser import use_args, parser
 
     def decorator(func):
-        func.args_ = args
-        func.kwargs_ = kwargs
+        func.webargs = getattr(func, "webargs", [])
+        func.webargs.append((args, {**kwargs, "location": kwargs.get("location") or parser.DEFAULT_LOCATION}))
         inner_decorator = use_args(*args, **kwargs)
         return inner_decorator(func)
 
@@ -43,15 +43,8 @@ def use_args(*args, **kwargs):
 
 
 def use_kwargs(*args, **kwargs):
-    from webargs.flaskparser import use_kwargs, parser
-
-    def decorator(func):
-        func.args_ = args
-        func.kwargs_ = {**kwargs, "location": kwargs.get("location") or parser.DEFAULT_LOCATION}
-        inner_decorator = use_kwargs(*args, **kwargs)
-        return inner_decorator(func)
-
-    return decorator
+    kwargs["as_kwargs"] = True
+    return use_args(*args, **kwargs)
 
 
 class MultipleOf(validate.Validator):
