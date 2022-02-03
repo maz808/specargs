@@ -66,6 +66,7 @@ class MultipleOf(validate.Validator):
     default_message = "Must be a multiple of {multiply}."
 
     def __init__(self, multiply, *, error: typing.Optional[str] = None):
+        if multiply <= 0: raise ValueError("'multiply' argument of MultipleOf constructor must be a positive number!")
         self.multiply = multiply
         self.error = error or self.default_message  # type: str
 

@@ -1,85 +1,15 @@
-from typing import Union, Optional, List
+import math
+from typing import Union, List
 
 from werkzeug import routing
 from flask.views import MethodView
 from apispec.ext.marshmallow import MarshmallowPlugin
 from apispec_webframeworks.flask import FlaskPlugin
 from marshmallow import Schema
-from webargs import fields, validate
 from webargs.core import ArgMap
 from webargs.flaskparser import parser
 
 from . import MultipleOf
-
-# def _generate_schema_from_field(field: fields.Field) -> dict:
-
-#     def get_type_name(field: fields.Field) -> bool:
-#         type_fields = (
-#             ("number", (fields.Number,)),
-#             ("boolean", (fields.Boolean,)),
-#             ("object", (fields.Mapping, fields.Nested)),
-#             ("string", (fields.String, fields.DateTime, fields.IP, fields.IPInterface, fields.Raw)),
-#         )
-#         for type_name, field_types in type_fields:
-#             for field_type in field_types:
-#                 if isinstance(field, field_type): return type_name
-#         raise NotImplementedError(f"Field '{type(field)}' and superclasses not implemented!")
-
-#     def get_format(field: Union[fields.String, fields.Number]) -> Optional[str]:
-#         field_formats: dict[fields.Field, str] = {
-#             fields.Date: "date",
-#             fields.DateTime: "date-time",
-#             fields.AwareDateTime: "date-time",
-#             fields.NaiveDateTime: "date-time",
-#             fields.Time: "date-time",
-#             fields.Email: "email",
-#             fields.IP: "ip",
-#             fields.IPv4: "ipv4",
-#             fields.IPv6: "ipv6",
-#             fields.Url: "url",
-#             fields.UUID: "uuid",
-#             fields.Float: "float",
-#         }
-#         return field_formats.get(type(field))
-
-#     schema_dict = {
-#         # Test for Integer first because Integer is a subclass of Number
-#         "type": "integer" if isinstance(field, fields.Integer) else get_type_name(field)
-#     }
-
-#     if isinstance(field, fields.String) or isinstance(field, fields.Number):
-#         format = get_format(field)
-#         if format:
-#             schema_dict["format"] = format
-    
-#     if isinstance(field, fields.Number):
-#         for validator in field.validators:
-#             if isinstance(validator, validate.Range):
-#                 schema_dict = {
-#                     **schema_dict,
-#                     "minimum": validator.min,
-#                     "maximum": validator.max,
-#                     "exclusiveMinimum": not validator.min_inclusive,
-#                     "exclusiveMaximum": not validator.max_inclusive,
-#                 }
-#             if isinstance(validator, MultipleOf):
-#                 schema_dict["multipleOf"] = validator.multiply
-
-#     return schema_dict
-
-
-# def _parse_dict_params(params: dict[str, fields.Field], location) -> dict:
-#     out_dict = {}
-#     if location == "query":
-#         out_dict["parameters"] = []
-#         for name, field in params.items():
-#             new_param = {
-#                 "in": location,
-#                 "name": name,
-#                 "schema": _generate_schema_from_field(field),
-#                 "required": field.required,
-#                 "description": field.metadata.get("description")
-#             }
 
 
 def _schema_data_from_converter(converter: routing.BaseConverter) -> dict[str, Union[str, int, List[str]]]:
@@ -115,7 +45,6 @@ def _schema_data_from_converter(converter: routing.BaseConverter) -> dict[str, U
     return {"type": param_type, **schema_dict}
 
 
-# def _parameters_data_from_rule(rule: routing.Rule) -> dict[str, list[dict]]:
 def _parameters_data_from_rule(rule: routing.Rule) -> list[dict]:
     parameters: List[dict] = []
     for arg in rule.arguments:
@@ -124,17 +53,36 @@ def _parameters_data_from_rule(rule: routing.Rule) -> list[dict]:
         parameters.append(param_dict)
 
     return parameters
-    # return {"parameters": parameters} if parameters else {}
+
+
+def field2multipleOf(self, field, **kwargs):
+    """Return the dictionary of OpenAPI field attributes for a set of
+    :class:`MultipleOf <apispec_webargs.MultipleOf>` validators.
+
+    :param Field field: A marshmallow field.
+    :rtype: dict
+    """
+    validators = [
+        validator
+        for validator in field.validators
+        if isinstance(validator, MultipleOf)
+    ]
+    # Remove any validators that contain a value that is a factor of any of the other validator values
+    validators = [
+        validator for validator in validators for other_validator in validators
+        if not any(other_validator.multiply % validator.multiply == 0)
+    ]
+    return {"multipleOf": math.prod(validator.multiply for validator in validators)}
 
 
 class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
     def __init__(self):
         super().__init__()
         self.rule_by_view = {}
+        self.converter.add_attribute_function(field2multipleOf)
 
     def path_helper(self, operations, parameters, *, view, app=None, **kwargs):
         rule = self.rule_by_view[view] = self._rule_for_view(view, app=app)
-        # operations.update(_parameters_data_from_rule(rule))
         parameters.extend(_parameters_data_from_rule(rule))
         return super().path_helper(operations={}, view=view, app=app, **kwargs)
 
@@ -155,17 +103,6 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
                 if method in rule.methods:
                     method_name = method.lower()
                     method = getattr(view.view_class, method_name)
-                    # method_dict = {}
-                    # arg_map: ArgMap = method.args_[0]
-                    # if isinstance(arg_map, dict):
-                    #     arg_map = parser.schema_class.from_dict(method.args_[0])()
-                    #     method_dict = _parse_dict_params(method.args_[0])
-                        # method_dict['parameters'] = [
-                        #     {"name": name, "in": method.kwargs_["location"], **_generate_schema_from_field(field)}
-                        #     for name, field in method.args_[0].items()
-                        # ]
-                        # for name, field in method.args_[0].items():
-                            # _generate_schema_from_field(field)
                     operations.setdefault(method_name, {})
                     operations[method_name].update(
                         self._operation_data_from_argmap(method.args_[0], location=method.kwargs_["location"])
