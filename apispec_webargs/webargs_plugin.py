@@ -1,5 +1,6 @@
+from http import HTTPStatus
 import math
-from typing import Union, List
+from typing import Union, List, Optional
 
 from werkzeug import routing
 from flask.views import MethodView
@@ -7,9 +8,8 @@ from apispec.ext.marshmallow import MarshmallowPlugin
 from apispec_webframeworks.flask import FlaskPlugin
 from marshmallow import Schema
 from webargs.core import ArgMap
-from webargs.flaskparser import parser
 
-from . import MultipleOf
+from . import MultipleOf, ensure_schema_from_argmap
 
 
 def _schema_data_from_converter(converter: routing.BaseConverter) -> dict[str, Union[str, int, List[str]]]:
@@ -77,6 +77,7 @@ def field2multipleOf(_, field, **kwargs):
     return {"multipleOf": math.prod(relevant_values)}
 
 
+
 class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
     def __init__(self):
         super().__init__()
@@ -91,37 +92,50 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
         parameters.extend(_parameters_data_from_rule(rule))
         return super().path_helper(operations={}, view=view, app=app, **kwargs)
 
-    def _requestBody_from_schema(self, schema: Schema):
+    def _content_from_schema(self, schema: Schema):
         return {
-            "requestBody": {
-                "required": True,
-                "content": {
-                    "application/json": {
-                        "schema": self.converter.schema2jsonschema(schema)
-                    }
+            "content": {
+                "application/json": {
+                    "schema": self.converter.schema2jsonschema(schema)
                 }
             }
         }
 
-    def _operation_data_from_schema(self, schema: Schema, *, location: str):
+    def _requestBody_from_schema(self, schema: Schema):
+        request_body_dict = {"required": True}
+        request_body_dict.update(self._content_from_schema(schema))
+        return {"requestBody": request_body_dict}
+
+    def _operation_input_data_from_schema(self, schema: Schema, *, location: str):
         return (self._requestBody_from_schema(schema) if location == "json" else
             {"parameters": self.converter.schema2parameters(schema, location=location)})
 
-    def _operation_data_from_argmap(self, argmap: ArgMap, *, location: str):
-        if isinstance(argmap, dict):
-            argmap = parser.schema_class.from_dict(argmap)()
-        return self._operation_data_from_schema(argmap, location=location)
+    def _operation_input_data_from_argmap(self, argmap: ArgMap, *, location: str):
+        argmap = ensure_schema_from_argmap(argmap)
+        return self._operation_input_data_from_schema(argmap, location=location)
+
+    def _operation_output_data_from_schema(self, schema: Optional[Schema]):
+        # TODO: Get response description from metadata that's passed in
+        response_dict = {"description": ""}
+        if schema: response_dict.update(self._content_from_schema(schema))
+        return response_dict
 
     def operation_helper(self, operations, *, view, **kwargs):
         """Path helper that allows passing a Flask view function."""
         rule = self.rule_by_view[view]
         if hasattr(view, "view_class") and issubclass(view.view_class, MethodView):
             for method in view.methods:
+                # Check if method was registered in view but not in rule
                 if method not in rule.methods: continue
                 method_name = method.lower()
                 method = getattr(view.view_class, method_name)
                 operations.setdefault(method_name, {})
-                for args, kwargs in method.webargs:
+                for args, kwargs in getattr(method, "webargs"):
                     operations[method_name].update(
-                        self._operation_data_from_argmap(args[0], location=kwargs["location"])
+                        self._operation_input_data_from_argmap(args[0], location=kwargs["location"])
                     )
+                responses = {
+                    status_code.value: self._operation_output_data_from_schema(schema)
+                    for status_code, schema in getattr(method, "responses", {}).items()
+                }
+                if responses: operations[method_name]["responses"] = responses

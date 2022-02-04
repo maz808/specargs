@@ -1,20 +1,33 @@
+from http import HTTPStatus
+
 from flask import Blueprint
 from flask.views import MethodView
+from marshmallow import Schema
 from webargs import fields, validate
 
-from apispec_webargs import use_kwargs
+from apispec_webargs import use_kwargs, response
 
-from .example import ExampleView, Example
+from .example import ExampleView, ExampleSchema
+from ..spec import spec
+
+
+class ExamplesSchema(Schema):
+    examples = fields.List(fields.Nested(ExampleSchema))
+
+
+spec.components.schema("Examples", schema=ExamplesSchema)
 
 
 class ExamplesView(MethodView):
     @use_kwargs({"startsWith": fields.String(), "count": fields.Integer(validate=validate.Range(min=1, max=5))}, location = "query")
+    @response(ExamplesSchema)
     def get(self, **kwargs):
         print(kwargs)
         return "EXAMPLES!"
 
     @use_kwargs({"test": fields.String()}, location = "query")
     @use_kwargs({"name": fields.String(), "color": fields.String(), "age": fields.Integer()})
+    @response({}, status_code=HTTPStatus.CREATED)
     def post(self, **kwargs):
         print(kwargs)
         return "EXAMPLE POSTED!"

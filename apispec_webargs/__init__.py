@@ -1,8 +1,15 @@
 __version__ = '0.1.0'
 
-import typing
+from collections.abc import Iterable
+import functools
+from http import HTTPStatus
+from typing import Optional, Union
 
+from marshmallow import Schema
+from marshmallow.schema import SchemaMeta
 from webargs import validate
+from webargs.core import ArgMap
+from webargs.flaskparser import parser
 
 # def use_params(params: dict, *, location: str, **kwargs):
 #     '''Endpoint function decorator to be used in place of webargs' `use_kwargs`
@@ -58,7 +65,7 @@ class MultipleOf(validate.Validator):
 
     default_message = "Must be a multiple of {multiply}."
 
-    def __init__(self, multiply, *, error: typing.Optional[str] = None):
+    def __init__(self, multiply, *, error: Optional[str] = None):
         if multiply <= 0: raise ValueError("'multiply' argument of MultipleOf constructor must be a positive number!")
         self.multiply = multiply
         self.error = error or self.default_message  # type: str
@@ -73,3 +80,31 @@ class MultipleOf(validate.Validator):
         if self.multiply % value != 0:
             raise validate.ValidationError(self._format_error(value))
         return value
+
+
+def ensure_schema_from_argmap(argmap: Union[ArgMap, SchemaMeta]) -> Schema:
+    if isinstance(argmap, dict):
+        return parser.schema_class.from_dict(argmap)()
+    if isinstance(argmap, SchemaMeta):
+        return argmap()
+    return argmap
+
+
+def response(argmap: Union[ArgMap, SchemaMeta], *, status_code: HTTPStatus = HTTPStatus.OK):
+    schema = ensure_schema_from_argmap(argmap) if argmap else None
+
+    def decorator(func):
+        func.responses = getattr(func, "responses", {})
+        if status_code in func.responses:
+            # TODO: Add python logger warning for duplicate status code
+            print(f"\nStatus code '{status_code}' registered to '{func.__qualname__}' multiple times!")
+        func.responses[status_code] = schema
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            data = func(*args, **kwargs)
+            return schema.dump(data, many=isinstance(data, Iterable))
+
+        return wrapper
+
+    return decorator
