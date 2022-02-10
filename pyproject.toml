@@ -11,9 +11,12 @@ Flask = "2.0.1"
 webargs = "^8.1.0"
 python-dotenv = "^0.19.2"
 apispec-webframeworks = "^0.5.2"
+attrs = "^21.4.0"
+cattrs = "^1.10.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
+Flask-Cors = "^3.0.10"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -5,9 +5,9 @@ from flask.views import MethodView
 from marshmallow import Schema
 from webargs import fields, validate
 
-from apispec_webargs import use_kwargs, response
+from apispec_webargs import use_kwargs, response, AllOf, AnyOf, OneOf
 
-from .example import ExampleView, ExampleSchema
+from .example import ExampleView, ExampleSchema, OtherSchema
 from ..spec import spec
 
 
@@ -20,13 +20,14 @@ spec.components.schema("Examples", schema=ExamplesSchema)
 
 class ExamplesView(MethodView):
     @use_kwargs({"startsWith": fields.String(), "count": fields.Integer(validate=validate.Range(min=1, max=5))}, location = "query")
-    @response(ExamplesSchema)
+    # @response(ExamplesSchema)
     def get(self, **kwargs):
         print(kwargs)
         return "EXAMPLES!"
 
     @use_kwargs({"test": fields.String()}, location = "query")
-    @use_kwargs({"name": fields.String(), "color": fields.String(), "age": fields.Integer()})
+    # @use_kwargs({"name": fields.String(), "color": fields.String(), "age": fields.Integer()})
+    @use_kwargs(OneOf(ExampleSchema, OtherSchema))
     @response({}, status_code=HTTPStatus.CREATED)
     def post(self, **kwargs):
         print(kwargs)

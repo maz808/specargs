@@ -1,18 +1,22 @@
 from http import HTTPStatus
 import math
-from typing import Union, List, Optional
+from typing import Dict, Union, List, Optional
 
 from werkzeug import routing
 from flask.views import MethodView
 from apispec.ext.marshmallow import MarshmallowPlugin
+from apispec.ext.marshmallow.common import make_schema_key
 from apispec_webframeworks.flask import FlaskPlugin
 from marshmallow import Schema
 from webargs.core import ArgMap
 
-from . import MultipleOf, ensure_schema_from_argmap
+from . import MultipleOf
+from .common import ensure_schema_or_factory, con
+from .response import Response
+from .in_poly import InPoly
 
 
-def _schema_data_from_converter(converter: routing.BaseConverter) -> dict[str, Union[str, int, List[str]]]:
+def _schema_data_from_converter(converter: routing.BaseConverter) -> Dict[str, Union[str, int, List[str]]]:
     if isinstance(converter, routing.UnicodeConverter):
         param_type = "string"
         length_args = converter.regex[converter.regex.index("{") + 1, converter.regex.index("}")].split(",")
@@ -45,7 +49,7 @@ def _schema_data_from_converter(converter: routing.BaseConverter) -> dict[str, U
     return {"type": param_type, **schema_dict}
 
 
-def _parameters_data_from_rule(rule: routing.Rule) -> list[dict]:
+def _parameters_data_from_rule(rule: routing.Rule) -> List[dict]:
     parameters: List[dict] = []
     for arg in rule.arguments:
         param_dict = {"name": arg, "in": "path", "required": True}
@@ -87,16 +91,29 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
         super().init_spec(spec)
         self.converter.add_attribute_function(field2multipleOf)
 
+    def response_helper(self, _, *, response: Response, **kwargs):
+        return super().response_helper(con.unstructure(response)) 
+
     def path_helper(self, operations, parameters, *, view, app=None, **kwargs):
         rule = self.rule_by_view[view] = self._rule_for_view(view, app=app)
         parameters.extend(_parameters_data_from_rule(rule))
         return super().path_helper(operations={}, view=view, app=app, **kwargs)
 
-    def _content_from_schema(self, schema: Schema):
+    def _resolve_schema(self, schema: Schema) -> dict:
+        schema_key = make_schema_key(schema)
+        if schema_key in self.converter.refs:
+            return self.converter.get_ref_dict(schema)
+        return self.converter.schema2jsonschema(schema)
+
+    def _content_from_schema(self, schema_or_inpoly: Union[Schema, InPoly]) -> dict:
+        schema_dict = (
+            self._resolve_schema(schema_or_inpoly) if isinstance(schema_or_inpoly, Schema) else
+            {schema_or_inpoly.string_rep: tuple(self._resolve_schema(schema) for schema in schema_or_inpoly.schemas)}
+        )
         return {
             "content": {
                 "application/json": {
-                    "schema": self.converter.schema2jsonschema(schema)
+                    "schema": schema_dict
                 }
             }
         }
@@ -111,13 +128,13 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
             {"parameters": self.converter.schema2parameters(schema, location=location)})
 
     def _operation_input_data_from_argmap(self, argmap: ArgMap, *, location: str):
-        argmap = ensure_schema_from_argmap(argmap)
+        argmap = ensure_schema_or_factory(argmap)
         return self._operation_input_data_from_schema(argmap, location=location)
 
-    def _operation_output_data_from_schema(self, schema: Optional[Schema]):
-        # TODO: Get response description from metadata that's passed in
-        response_dict = {"description": ""}
-        if schema: response_dict.update(self._content_from_schema(schema))
+    def _operation_output_data_from_response(self, response_tuple: tuple):
+        response_dict = {"description": response_tuple[1]}
+        if response_tuple[0]: response_dict.update(self._content_from_schema(response_tuple[0]))
+        if response_tuple[2]: response_dict.update({"headers": {name: value for name, value in response_tuple[2]}})
         return response_dict
 
     def operation_helper(self, operations, *, view, **kwargs):
@@ -135,7 +152,7 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
                         self._operation_input_data_from_argmap(args[0], location=kwargs["location"])
                     )
                 responses = {
-                    status_code.value: self._operation_output_data_from_schema(schema)
-                    for status_code, schema in getattr(method, "responses", {}).items()
+                    status_code.value: self._operation_output_data_from_response(response_tuple)
+                    for status_code, response_tuple in getattr(method, "responses", {}).items()
                 }
                 if responses: operations[method_name]["responses"] = responses
