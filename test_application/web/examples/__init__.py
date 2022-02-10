@@ -5,9 +5,9 @@ from flask.views import MethodView
 from marshmallow import Schema
 from webargs import fields, validate
 
-from apispec_webargs import use_kwargs, response, AllOf, AnyOf, OneOf
+from apispec_webargs import use_kwargs, response, empty_response, AllOf, AnyOf, OneOf
 
-from .example import ExampleView, ExampleSchema, OtherSchema
+from .example import ExampleView, ExampleSchema, OtherSchema, Example
 from ..spec import spec
 
 
@@ -20,18 +20,15 @@ spec.components.schema("Examples", schema=ExamplesSchema)
 
 class ExamplesView(MethodView):
     @use_kwargs({"startsWith": fields.String(), "count": fields.Integer(validate=validate.Range(min=1, max=5))}, location = "query")
-    # @response(ExamplesSchema)
+    @response(ExamplesSchema)
     def get(self, **kwargs):
-        print(kwargs)
-        return "EXAMPLES!"
+        return {"examples": [Example(1, "Joe")]}
 
     @use_kwargs({"test": fields.String()}, location = "query")
-    # @use_kwargs({"name": fields.String(), "color": fields.String(), "age": fields.Integer()})
     @use_kwargs(OneOf(ExampleSchema, OtherSchema))
-    @response({}, status_code=HTTPStatus.CREATED)
+    @empty_response(status_code=HTTPStatus.CREATED)
     def post(self, **kwargs):
         print(kwargs)
-        return "EXAMPLE POSTED!"
 
 
 examples_blueprint = Blueprint("examples-api", __name__, url_prefix="/examples")
