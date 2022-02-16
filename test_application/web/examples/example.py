@@ -21,6 +21,7 @@ class Example:
     # test: str = "wow"
 
 
+@spec.schema("Example")
 class ExampleSchema(Schema):
     id = fields.Int()
     name = fields.Str()
@@ -28,9 +29,7 @@ class ExampleSchema(Schema):
     req = fields.String(required=True)
 
 
-spec.components.schema("Example", schema=ExampleSchema)
-
-
+@spec.schema("Other")
 class OtherSchema(Schema):
     id = fields.Int()
     name = fields.String()
@@ -38,16 +37,11 @@ class OtherSchema(Schema):
     other_req = fields.Str(required=True)
 
 
-spec.components.schema("Other", schema=OtherSchema)
-
-
+@spec.schema("AnotherOneButWithAWeirdName")
 class AnotherOneSchema(Schema):
     id = fields.Int()
     name = fields.Str()
     another_req = fields.String(required=True)
-
-
-spec.components.schema("AnotherOne", schema=AnotherOneSchema)
 
 
 class ExampleView(MethodView):
@@ -55,4 +49,3 @@ class ExampleView(MethodView):
     @use_response(AnyOf(ExampleSchema, OtherSchema))
     def get(self, id, **kwargs):
         return Example(id=id, name=kwargs.get("name") or "example")
-

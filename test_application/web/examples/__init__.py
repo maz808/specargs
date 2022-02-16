@@ -11,11 +11,10 @@ from .example import ExampleView, ExampleSchema, OtherSchema, Example
 from ..spec import spec
 
 
+@spec.schema
 class ExamplesSchema(Schema):
     examples = fields.List(fields.Nested(ExampleSchema))
 
-
-spec.components.schema("Examples", schema=ExamplesSchema)
 
 # examples_response = Response(ExamplesSchema, description="A response with example objects")
 # spec.components.response("ExamplesResponse", response=examples_response)
