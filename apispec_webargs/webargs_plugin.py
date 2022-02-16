@@ -156,3 +156,8 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
                 method_name = method.lower()
                 method = getattr(view.view_class, method_name)
                 self._update_operations(operations, view=method, method_name=method_name)
+        else:
+            for method in rule.methods:
+                if method not in {"GET", "POST", "PUT", "PATCH", "DELETE"}: continue
+                method_name = method.lower()
+                self._update_operations(operations, view=view, method_name=method_name)
