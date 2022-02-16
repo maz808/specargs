@@ -1,14 +1,13 @@
 from collections.abc import Iterable
 import functools
 from http import HTTPStatus
-from typing import Tuple, Union
+from typing import Union
 
-from marshmallow import Schema
 from marshmallow.schema import SchemaMeta
 from webargs.core import ArgMap
 
-from .common import ensure_schema_or_factory
 from .in_poly import InPoly
+from .oas import Response, ensure_response
 
 
 def use_args(argmap: ArgMap, *args, **kwargs):
@@ -35,43 +34,45 @@ def use_kwargs(*args, **kwargs):
     return use_args(*args, **kwargs)
 
 
-class ResponseConflictError(Exception):
+class ResponseCodeConflictError(Exception):
     '''TODO: Write docstring for ResponseConflictError'''
     pass
 
 
-def response(
-    argmap: Union[ArgMap, SchemaMeta, InPoly],
+def use_response(
+    response_or_argmap: Union[Response, Union[ArgMap, SchemaMeta, InPoly]],
     *,
-    description: str = "",
-    headers: Tuple[Tuple[str,str]] = None,
     status_code: HTTPStatus = HTTPStatus.OK,
+    description: str = "",
+    **headers: str
 ):
-    '''TODO: Write docstring for response'''
-    headers = headers or tuple()
-    schema_or_inpoly : Union[Schema, InPoly] = ensure_schema_or_factory(argmap) if argmap else None
+    '''TODO: Write docstring for use_response'''
+    response = ensure_response(response_or_argmap, description=description, headers=headers)
 
     def decorator(func):
         func.responses = getattr(func, "responses", {})
         if status_code in func.responses:
-            raise ResponseConflictError(f"\nStatus code '{status_code}' registered to '{func.__qualname__}' multiple times!")
-        func.responses[status_code] = (schema_or_inpoly, description, headers)
+            raise ResponseCodeConflictError(f"\nStatus code '{status_code}' registered to '{func.__qualname__}' multiple times!")
+
+        func.responses[status_code] = response
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             data = func(*args, **kwargs)
-            if not schema_or_inpoly: return "", status_code
-            return schema_or_inpoly.dump(data, many=isinstance(data, Iterable)), status_code
+            return (
+                response.schema.dump(data, many=isinstance(data, Iterable)) if response.schema else "",
+                status_code
+            )
 
         return wrapper
 
     return decorator
 
 
-def empty_response(**kwargs):
+def use_empty_response(**kwargs):
     '''Convenience decorator for registering an empty response to a view method
     
     Args:
-        **kwargs: Any keyword arguments accepted by :func:`response`
+        **kwargs: Any keyword arguments accepted by :func:`use_response`
     '''
-    return response(None, **kwargs)
+    return use_response(None, **kwargs)

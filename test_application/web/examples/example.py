@@ -1,24 +1,24 @@
 from typing import Optional
 
-import attr
+from attrs import define
 from flask.views import MethodView
 from marshmallow import Schema
 from webargs import fields
 
-from apispec_webargs import use_kwargs, response, AnyOf
+from apispec_webargs import use_response, use_kwargs, AnyOf
 
 from ..spec import spec
 
 
-@attr.s(auto_attribs=True)
+@define
 class Example:
     id: int
     name: str
     req: str = "nice"
-    other_req: str = "other nice"
+    # other_req: str = "other nice"
     # another_req: str = "another nice"
-    sub: Optional["Example"] = None
-    test: str = "wow"
+    # sub: Optional["Example"] = None
+    # test: str = "wow"
 
 
 class ExampleSchema(Schema):
@@ -52,7 +52,7 @@ spec.components.schema("AnotherOne", schema=AnotherOneSchema)
 
 class ExampleView(MethodView):
     @use_kwargs({"name": fields.Str()}, location = "query")
-    @response(AnyOf(ExampleSchema, OtherSchema))
+    @use_response(AnyOf(ExampleSchema, OtherSchema))
     def get(self, id, **kwargs):
         return Example(id=id, name=kwargs.get("name") or "example")
 

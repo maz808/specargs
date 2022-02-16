@@ -1,19 +1,17 @@
-from http import HTTPStatus
 import math
-from typing import Dict, Union, List, Optional
+from typing import Dict, Union, List
 
 from werkzeug import routing
 from flask.views import MethodView
 from apispec.ext.marshmallow import MarshmallowPlugin
-from apispec.ext.marshmallow.common import make_schema_key
 from apispec_webframeworks.flask import FlaskPlugin
 from marshmallow import Schema
 from webargs.core import ArgMap
 
-from . import MultipleOf
 from .common import ensure_schema_or_factory, con
-from .response import Response
+from .oas import Response
 from .in_poly import InPoly
+from .validate import MultipleOf
 
 
 def _schema_data_from_converter(converter: routing.BaseConverter) -> Dict[str, Union[str, int, List[str]]]:
@@ -84,8 +82,11 @@ def field2multipleOf(_, field, **kwargs):
 
 class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
     def __init__(self):
-        super().__init__()
+        # Pass in lambda that returns None to completely disable schema name resolution. References to a Schema should
+        # only be resolvable if the Schema has been registered in the spec using `APISpec.components.schema`
+        super().__init__(schema_name_resolver=lambda _: None)
         self.rule_by_view = {}
+        self.response_refs: Dict[Response, str] = {}
 
     def init_spec(self, spec):
         super().init_spec(spec)
@@ -97,18 +98,13 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
     def path_helper(self, operations, parameters, *, view, app=None, **kwargs):
         rule = self.rule_by_view[view] = self._rule_for_view(view, app=app)
         parameters.extend(_parameters_data_from_rule(rule))
+        # An empty dict is passed into the operations argument to circumvent FlaskPlugin's operations changes
         return super().path_helper(operations={}, view=view, app=app, **kwargs)
-
-    def _resolve_schema(self, schema: Schema) -> dict:
-        schema_key = make_schema_key(schema)
-        if schema_key in self.converter.refs:
-            return self.converter.get_ref_dict(schema)
-        return self.converter.schema2jsonschema(schema)
 
     def _content_from_schema(self, schema_or_inpoly: Union[Schema, InPoly]) -> dict:
         schema_dict = (
-            self._resolve_schema(schema_or_inpoly) if isinstance(schema_or_inpoly, Schema) else
-            {schema_or_inpoly.string_rep: tuple(self._resolve_schema(schema) for schema in schema_or_inpoly.schemas)}
+            self.resolver.resolve_schema_dict(schema_or_inpoly) if isinstance(schema_or_inpoly, Schema) else
+            self.resolver.resolve_schema_dict(con.unstructure(schema_or_inpoly))
         )
         return {
             "content": {
@@ -131,11 +127,24 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
         argmap = ensure_schema_or_factory(argmap)
         return self._operation_input_data_from_schema(argmap, location=location)
 
-    def _operation_output_data_from_response(self, response_tuple: tuple):
-        response_dict = {"description": response_tuple[1]}
-        if response_tuple[0]: response_dict.update(self._content_from_schema(response_tuple[0]))
-        if response_tuple[2]: response_dict.update({"headers": {name: value for name, value in response_tuple[2]}})
+    def _operation_output_data_from_response(self, response: Response):
+        response_id = self.spec.response_refs.get(response)
+        if response_id: return response_id
+        response_dict: dict = con.unstructure(response)
+        if "content" in response_dict: self.resolver.resolve_response(response_dict)
         return response_dict
+
+    def _update_operations(self, operations, *, view, method_name: str):
+        operations.setdefault(method_name, {})
+        for args, kwargs in getattr(view, "webargs"):
+            operations[method_name].update(
+                self._operation_input_data_from_argmap(args[0], location=kwargs["location"])
+            )
+        responses = {
+            status_code.value: self._operation_output_data_from_response(response)
+            for status_code, response in getattr(view, "responses", {}).items()
+        }
+        if responses: operations[method_name]["responses"] = responses
 
     def operation_helper(self, operations, *, view, **kwargs):
         """Path helper that allows passing a Flask view function."""
@@ -146,13 +155,4 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
                 if method not in rule.methods: continue
                 method_name = method.lower()
                 method = getattr(view.view_class, method_name)
-                operations.setdefault(method_name, {})
-                for args, kwargs in getattr(method, "webargs"):
-                    operations[method_name].update(
-                        self._operation_input_data_from_argmap(args[0], location=kwargs["location"])
-                    )
-                responses = {
-                    status_code.value: self._operation_output_data_from_response(response_tuple)
-                    for status_code, response_tuple in getattr(method, "responses", {}).items()
-                }
-                if responses: operations[method_name]["responses"] = responses
+                self._update_operations(operations, view=method, method_name=method_name)

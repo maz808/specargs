@@ -1,11 +1,11 @@
 from abc import ABC, abstractclassmethod, abstractmethod
 from functools import reduce
-import json
 from operator import iand
-from typing import Any, ClassVar, Optional, Tuple
+from typing import Any, ClassVar, Tuple, Union
 
 from attrs import define, field
 from marshmallow import Schema, EXCLUDE, ValidationError
+from marshmallow.schema import SchemaMeta
 from webargs.core import ArgMap
 
 # TODO: Make Request type dependent on framework being used
@@ -13,10 +13,10 @@ from webargs.core import ArgMap
 # if <framework-package> in sys.modules
 from flask import Request
 
-from .common import ensure_schema_or_factory
+from .common import ensure_schema_or_factory, con
 
 
-def argmaps_to_schemas(argmap_or_argmaps: Tuple[ArgMap]) -> Tuple[Schema]:
+def argmaps_to_schemas(argmap_or_argmaps: Tuple[Union[ArgMap, SchemaMeta]]) -> Tuple[Schema]:
     '''TODO: Write docstring for argmaps_to_schemas'''
     if isinstance(argmap_or_argmaps, tuple):
         return tuple(ensure_schema_or_factory(argmap) for argmap in argmap_or_argmaps)
@@ -28,7 +28,7 @@ class InPoly(ABC):
     '''TODO: Write docstring for InPoly'''
     schemas: Tuple[Schema] = field(converter=argmaps_to_schemas)
 
-    def __init__(self, *schemas: Schema):
+    def __init__(self, *schemas: Union[ArgMap, SchemaMeta]):
         '''TODO: Write docstring for InPoly.__init__'''
         self.__attrs_init__(schemas)
 
@@ -55,6 +55,10 @@ class InPoly(ABC):
     @abstractmethod
     def __call__(self, request: Request) -> Schema:
         ...
+
+
+con.register_unstructure_hook(InPoly, lambda ip: {ip.string_rep: ip.schemas})
+
 
 # TODO: Improve initialization of OneOfConflictError (args to generate message)
 class OneOfConflictError(Exception):

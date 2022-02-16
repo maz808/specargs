@@ -5,7 +5,7 @@ from flask.views import MethodView
 from marshmallow import Schema
 from webargs import fields, validate
 
-from apispec_webargs import use_kwargs, response, empty_response, AllOf, AnyOf, OneOf
+from apispec_webargs import use_response, use_kwargs, use_empty_response, AllOf, AnyOf, OneOf
 
 from .example import ExampleView, ExampleSchema, OtherSchema, Example
 from ..spec import spec
@@ -17,16 +17,21 @@ class ExamplesSchema(Schema):
 
 spec.components.schema("Examples", schema=ExamplesSchema)
 
+# examples_response = Response(ExamplesSchema, description="A response with example objects")
+# spec.components.response("ExamplesResponse", response=examples_response)
+examples_response = spec.response("ExamplesResponse", ExamplesSchema, description="A response with example objects")
 
 class ExamplesView(MethodView):
     @use_kwargs({"startsWith": fields.String(), "count": fields.Integer(validate=validate.Range(min=1, max=5))}, location = "query")
-    @response(ExamplesSchema)
+    # @use_response(ExamplesSchema)
+    @use_response(examples_response)
     def get(self, **kwargs):
         return {"examples": [Example(1, "Joe")]}
 
     @use_kwargs({"test": fields.String()}, location = "query")
-    @use_kwargs(OneOf(ExampleSchema, OtherSchema))
-    @empty_response(status_code=HTTPStatus.CREATED)
+    @use_kwargs(OneOf(ExampleSchema, OtherSchema, {"name": fields.String(), "test": fields.String()}))
+    # @use_empty_response(status_code=HTTPStatus.CREATED)
+    @use_response({"name": fields.String()})
     def post(self, **kwargs):
         print(kwargs)
 
