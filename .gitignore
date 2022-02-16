@@ -3,3 +3,6 @@ __pycache__/
 
 # VS Code
 .vscode
+
+# Project specific
+out_spec.yaml
