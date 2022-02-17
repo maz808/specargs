@@ -9,11 +9,12 @@ from webargs.core import ArgMap
 from .in_poly import InPoly
 from .oas import Response, ensure_response
 
+# TODO: Import parser depending on frawework in venv
+from webargs.flaskparser import parser
 
-def use_args(argmap: ArgMap, *args, **kwargs):
+
+def use_args(argmap: ArgMap, *args, location: str = parser.DEFAULT_LOCATION, **kwargs):
     '''TODO: Write docstring for use_args'''
-    from webargs.flaskparser import use_args, parser
-    location = kwargs.get("location") or parser.DEFAULT_LOCATION
     if callable(argmap) and not isinstance(argmap, InPoly):
         raise TypeError("Schema factories are not currently supported!")
     if isinstance(argmap, InPoly) and location != "json":
@@ -22,7 +23,7 @@ def use_args(argmap: ArgMap, *args, **kwargs):
     def decorator(func):
         func.webargs = getattr(func, "webargs", [])
         func.webargs.append(((argmap, *args), {**kwargs, "location": location}))
-        inner_decorator = use_args(argmap, *args, **kwargs)
+        inner_decorator = parser.use_args(argmap, *args, **kwargs)
         return inner_decorator(func)
 
     return decorator
