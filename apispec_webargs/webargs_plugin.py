@@ -9,6 +9,7 @@ from marshmallow import Schema
 from webargs.core import ArgMap
 
 from .common import ensure_schema_or_factory, con
+from .decorators import Webargs
 from .oas import Response
 from .in_poly import InPoly
 from .validate import MultipleOf
@@ -136,10 +137,13 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
 
     def _update_operations(self, operations, *, view, method_name: str):
         operations.setdefault(method_name, {})
-        for args, kwargs in getattr(view, "webargs"):
+        for webargs in getattr(view, "webargs"):
+            if not isinstance(webargs, Webargs):
+                raise TypeError("The webargs attribute should be a list of only decorators.Webargs!")
             operations[method_name].update(
-                self._operation_input_data_from_argmap(args[0], location=kwargs["location"])
+                self._operation_input_data_from_argmap(webargs.argmap, location=webargs.location)
             )
+
         responses = {
             status_code.value: self._operation_output_data_from_response(response)
             for status_code, response in getattr(view, "responses", {}).items()

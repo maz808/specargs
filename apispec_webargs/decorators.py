@@ -1,3 +1,4 @@
+from collections import namedtuple
 from collections.abc import Iterable
 import functools
 from http import HTTPStatus
@@ -13,6 +14,9 @@ from .oas import Response, ensure_response
 from webargs.flaskparser import parser
 
 
+Webargs = namedtuple("Webargs", ("argmap", "location"))
+
+
 def use_args(argmap: ArgMap, *args, location: str = parser.DEFAULT_LOCATION, **kwargs):
     '''TODO: Write docstring for use_args'''
     if callable(argmap) and not isinstance(argmap, InPoly):
@@ -22,8 +26,8 @@ def use_args(argmap: ArgMap, *args, location: str = parser.DEFAULT_LOCATION, **k
 
     def decorator(func):
         func.webargs = getattr(func, "webargs", [])
-        func.webargs.append(((argmap, *args), {**kwargs, "location": location}))
-        inner_decorator = parser.use_args(argmap, *args, **kwargs)
+        func.webargs.append(Webargs(argmap, location))
+        inner_decorator = parser.use_args(argmap, *args, location = location, **kwargs)
         return inner_decorator(func)
 
     return decorator
