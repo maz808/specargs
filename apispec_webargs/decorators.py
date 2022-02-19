@@ -2,7 +2,7 @@ from collections import namedtuple
 from collections.abc import Iterable
 import functools
 from http import HTTPStatus
-from typing import Union
+from typing import Optional, Union
 
 from marshmallow.schema import SchemaMeta
 from webargs.core import ArgMap
@@ -17,8 +17,23 @@ from webargs.flaskparser import parser
 Webargs = namedtuple("Webargs", ("argmap", "location"))
 
 
-def use_args(argmap: ArgMap, *args, location: str = parser.DEFAULT_LOCATION, **kwargs):
-    '''TODO: Write docstring for use_args'''
+def use_args(argmap: Union[ArgMap, InPoly], *args, location: str = parser.DEFAULT_LOCATION, **kwargs):
+    '''A wrapper around webargs' `use_args` decorator function
+
+    This attaches attributes to the wrapped view function that are later used to populate the operation data for the
+    generated API spec.
+    
+    Args:
+        argmap: A dictionary of marshmallow `Field` instances, a marshmallow `Schema`, or an object that inherits from
+            :class:`~in_poly.InPoly`
+        *args: Any other positional arguments accepted by webargs' `use_args`
+        location: Identical to the `location` argument of webargs' `use_args`
+        **kwargs: Any other keyword arguments accepted by webargs' `use_args`
+
+    Raises:
+        TypeError: If `argmap` is Schema factory as is accepted by webargs' `use_args`
+        ValueError: If `argmap` is an :class:`~in_poly.InPoly` object and `location` is anything besides `"json"`
+    '''
     if callable(argmap) and not isinstance(argmap, InPoly):
         raise TypeError("Schema factories are not currently supported!")
     if isinstance(argmap, InPoly) and location != "json":
@@ -34,23 +49,35 @@ def use_args(argmap: ArgMap, *args, location: str = parser.DEFAULT_LOCATION, **k
 
 
 def use_kwargs(*args, **kwargs):
-    '''TODO: Write docstring for use_kwargs'''
+    '''A decorator equivalent to :func:`use_args` with the keyword argument `as_kwargs` set to `True`'''
     return use_args(*args, as_kwargs=True, **kwargs)
 
 
 class DuplicateResponseCodeError(Exception):
-    '''TODO: Write docstring for DuplicateResponseCodeError'''
+    '''An error to be raised when a status code is registered to a single view function/method more than once'''
     pass
 
 
 def use_response(
-    response_or_argmap: Union[Response, Union[ArgMap, SchemaMeta, InPoly]],
+    response_or_argmap: Optional[Union[Response, Union[ArgMap, SchemaMeta, InPoly]]],
     *,
     status_code: HTTPStatus = HTTPStatus.OK,
     description: str = "",
     **headers: str
 ):
-    '''TODO: Write docstring for use_response'''
+    '''A decorator function used for registering a response to a view function/method
+
+    Args:
+        response_or_argmap: A :class:`~oas.Response` object, an :class:`~in_poly.InPoly` object, a marshmallow `Schema`
+            class or instance, a dictionary of names to marshmallow `Field` objects, or `None`
+        status_code: The status code under which the response is being registered. Defaults to `http.HTTPStatus.OK`
+        description: The response description. Defaults to an empty string
+        **headers: Any keyword arguments not listed above are taken as response header names and values
+
+    Raises:
+        :class:`DuplicateResponseCodeError`: If a status code is registered to the same view function/method more than
+            once
+    '''
     response = ensure_response(response_or_argmap, description=description, headers=headers)
 
     def decorator(func):
@@ -63,7 +90,7 @@ def use_response(
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             data = func(*args, **kwargs)
-            # TODO: Allow response types other than Schema (i.e. marshmallow.fields)
+            # TODO: Allow response types other than Schema (i.e. Field)
             return (
                 response.schema.dump(data, many=isinstance(data, Iterable)) if response.schema else "",
                 status_code
@@ -81,3 +108,4 @@ def use_empty_response(**kwargs):
         **kwargs: Any keyword arguments accepted by :func:`use_response`
     '''
     return use_response(None, **kwargs)
+
