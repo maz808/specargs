@@ -17,6 +17,7 @@ cattrs = "^1.10.0"
 pytest = "^5.2"
 Flask-Cors = "^3.0.10"
 Flask = "^2.0.3"
+pytest-mock = "^3.7.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

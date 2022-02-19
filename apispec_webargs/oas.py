@@ -27,7 +27,7 @@ class Response:
         return {"application/json": {"schema": self.schema}}
 
 
-# Omit `schema` and default attributes and include `content` property if schema is trueish when converting to a dict
+# Omit `schema` and default attributes and include `content` property if `schema` is trueish when converting to a dict
 def _add_content_hook(response: Response) -> dict:
     out_dict = make_dict_unstructure_fn(
         Response,

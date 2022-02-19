@@ -35,12 +35,11 @@ def use_args(argmap: ArgMap, *args, location: str = parser.DEFAULT_LOCATION, **k
 
 def use_kwargs(*args, **kwargs):
     '''TODO: Write docstring for use_kwargs'''
-    kwargs["as_kwargs"] = True
-    return use_args(*args, **kwargs)
+    return use_args(*args, as_kwargs=True, **kwargs)
 
 
-class ResponseCodeConflictError(Exception):
-    '''TODO: Write docstring for ResponseConflictError'''
+class DuplicateResponseCodeError(Exception):
+    '''TODO: Write docstring for DuplicateResponseCodeError'''
     pass
 
 
@@ -57,13 +56,14 @@ def use_response(
     def decorator(func):
         func.responses = getattr(func, "responses", {})
         if status_code in func.responses:
-            raise ResponseCodeConflictError(f"\nStatus code '{status_code}' registered to '{func.__qualname__}' multiple times!")
+            raise DuplicateResponseCodeError(f"\nStatus code '{status_code}' is already registered to '{func.__qualname__}'!")
 
         func.responses[status_code] = response
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             data = func(*args, **kwargs)
+            # TODO: Allow response types other than Schema (i.e. marshmallow.fields)
             return (
                 response.schema.dump(data, many=isinstance(data, Iterable)) if response.schema else "",
                 status_code
