@@ -40,3 +40,8 @@ def test_ensure_schema_or_factory_dict(mocker: MockerFixture):
     parser.schema_class.from_dict.return_value.assert_called_once()
     assert result == parser.schema_class.from_dict.return_value.return_value
 
+
+def test_ensure_schema_or_factory_invalid():
+    with pytest.raises(TypeError):
+        common.ensure_schema_or_factory("invalid")
+
