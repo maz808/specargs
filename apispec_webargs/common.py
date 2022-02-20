@@ -18,3 +18,4 @@ def ensure_schema_or_factory(argmap: Union[ArgMap, SchemaMeta]) -> Union[Schema,
     if callable(argmap): return argmap
     if isinstance(argmap, dict): return parser.schema_class.from_dict(argmap)()
     raise TypeError(f"Unable to get Schema or Schema factory from {argmap}!")
+
