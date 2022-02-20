@@ -7,13 +7,13 @@ from marshmallow.schema import SchemaMeta
 from webargs.core import ArgMap
 
 from .in_poly import InPoly
-from .common import ensure_schema_or_factory, con
+from .common import ensure_schema_or_inpoly, con
 
 
 @define(eq=False)
 class Response:
     '''TODO: Write docstring for Response'''
-    schema: Optional[Union[Schema, InPoly]] = field(converter=converters.optional(ensure_schema_or_factory))
+    schema: Optional[Union[Schema, InPoly]] = field(converter=converters.optional(ensure_schema_or_inpoly))
     description: str = ""
     headers: Dict[str, str] = Factory(dict)
 
@@ -55,6 +55,6 @@ def ensure_response(
         raise TypeError("Schema factories are not currently supported!")
 
     schema_or_inpoly : Union[Schema, InPoly] = (
-        ensure_schema_or_factory(response_or_argmap) if response_or_argmap else None
+        ensure_schema_or_inpoly(response_or_argmap) if response_or_argmap else None
     )
     return Response(schema_or_inpoly, description=description, headers=headers)

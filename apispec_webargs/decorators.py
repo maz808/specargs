@@ -75,7 +75,7 @@ def use_response(
         **headers: Any keyword arguments not listed above are taken as response header names and values
 
     Raises:
-        :class:`DuplicateResponseCodeError`: If a status code is registered to the same view function/method more than
+        :exc:`DuplicateResponseCodeError`: If a status code is registered to the same view function/method more than
             once
     '''
     response = ensure_response(response_or_argmap, description=description, headers=headers)

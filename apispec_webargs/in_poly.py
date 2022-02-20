@@ -13,14 +13,14 @@ from webargs.core import ArgMap
 # if <framework-package> in sys.modules
 from flask import Request
 
-from .common import ensure_schema_or_factory, con
+from .common import ensure_schema_or_inpoly, con
 
 
 def argmaps_to_schemas(argmap_or_argmaps: Tuple[Union[ArgMap, SchemaMeta]]) -> Tuple[Schema]:
     '''TODO: Write docstring for argmaps_to_schemas'''
     if isinstance(argmap_or_argmaps, tuple):
-        return tuple(ensure_schema_or_factory(argmap) for argmap in argmap_or_argmaps)
-    return ensure_schema_or_factory(argmap_or_argmaps)
+        return tuple(ensure_schema_or_inpoly(argmap) for argmap in argmap_or_argmaps)
+    return ensure_schema_or_inpoly(argmap_or_argmaps)
 
 
 @define

@@ -8,7 +8,7 @@ from apispec_webframeworks.flask import FlaskPlugin
 from marshmallow import Schema
 from webargs.core import ArgMap
 
-from .common import ensure_schema_or_factory, con
+from .common import ensure_schema_or_inpoly, con
 from .decorators import Webargs
 from .oas import Response
 from .in_poly import InPoly
@@ -125,7 +125,7 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
             {"parameters": self.converter.schema2parameters(schema, location=location)})
 
     def _operation_input_data_from_argmap(self, argmap: ArgMap, *, location: str):
-        argmap = ensure_schema_or_factory(argmap)
+        argmap = ensure_schema_or_inpoly(argmap)
         return self._operation_input_data_from_schema(argmap, location=location)
 
     def _operation_output_data_from_response(self, response: Response):
