@@ -4,5 +4,8 @@ __pycache__/
 # VS Code
 .vscode
 
+# Vim
+**/*.swp
+
 # Project specific
 out_spec.yaml
