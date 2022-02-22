@@ -141,7 +141,7 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
             if not isinstance(webargs, Webargs):
                 raise TypeError("The webargs attribute should be a list of only decorators.Webargs!")
             operations[method_name].update(
-                self._operation_input_data_from_argmap(webargs.argmap, location=webargs.location)
+                self._operation_input_data_from_argmap(webargs.argpoly, location=webargs.location)
             )
 
         responses = {
