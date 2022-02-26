@@ -32,7 +32,7 @@ def test_use_args_inpoly_invalid_location():
         decorators.use_args(OneOf(), location="not json")
 
 
-def test_use_args_ensure_schema_or_inpoly_error(ensure_schema_or_inpoly_error: MagicMock):
+def test_use_args_invalid_argpoly(ensure_schema_or_inpoly_error: MagicMock):
     with pytest.raises(TypeError):
         decorators.use_args("argpoly")
 

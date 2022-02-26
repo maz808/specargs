@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 import functools
 from http import HTTPStatus
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 from attrs import frozen
 
@@ -19,7 +19,7 @@ class Webargs:
     location: str
 
 
-def use_args(argpoly: Union[ArgMap, InPoly], *args, location: str = parser.DEFAULT_LOCATION, **kwargs):
+def use_args(argpoly: Union[ArgMap, InPoly], *args, location: str = parser.DEFAULT_LOCATION, **kwargs) -> Callable[..., Callable]:
     '''A wrapper around webargs' `use_args` decorator function
 
     This attaches attributes to the wrapped view function that are later used to populate the operation data for the
@@ -27,7 +27,7 @@ def use_args(argpoly: Union[ArgMap, InPoly], *args, location: str = parser.DEFAU
     
     Args:
         argpoly: A dictionary of marshmallow `Field` instances, a marshmallow `Schema` instance or class, or an object that inherits from
-            :class:`~in_poly.InPoly`
+            :class:`~in_poly.InPoly` to be used for request argument parsing
         *args: Any other positional arguments accepted by webargs' `use_args`
         location: Identical to the `location` argument of webargs' `use_args`
         **kwargs: Any other keyword arguments accepted by webargs' `use_args`
@@ -49,7 +49,7 @@ def use_args(argpoly: Union[ArgMap, InPoly], *args, location: str = parser.DEFAU
     return decorator
 
 
-def use_kwargs(*args, **kwargs):
+def use_kwargs(*args, **kwargs) -> Callable[..., Callable]:
     '''A decorator equivalent to :func:`use_args` with the keyword argument `as_kwargs` set to `True`'''
     return use_args(*args, as_kwargs=True, **kwargs)
 
@@ -65,13 +65,16 @@ def use_response(
     status_code: HTTPStatus = HTTPStatus.OK,
     description: str = "",
     **headers: str
-):
+) -> Callable[..., Callable]:
     '''A decorator function used for registering a response to a view function/method
 
     Args:
         response_or_argpoly: A :class:`~oas.Response` object, an :class:`~in_poly.InPoly` object, a marshmallow `Schema`
-            class or instance, a dictionary of names to marshmallow `Field` objects, or `None`
-        status_code: The status code under which the response is being registered. Defaults to `http.HTTPStatus.OK`
+            class or instance, a dictionary of names to marshmallow `Field` objects, or `None`. Determines the content
+            of the corresponding `response` clause in the generated OpenAPI spec and whether/how the data returned by
+            the decorated view function/method is serialized
+        status_code: The status code under which the response is being listed in the generated OpenAPI spec. Also used
+            as the status code for the decorated view function/method response. Defaults to `http.HTTPStatus.OK`
         description: The response description. Defaults to an empty string
         **headers: Any keyword arguments not listed above are taken as response header names and values
 
@@ -92,6 +95,7 @@ def use_response(
         def wrapper(*args, **kwargs):
             data = func(*args, **kwargs)
             # TODO: Allow response types other than Schema (i.e. Field)
+            # TODO: Determine return value based on framework (e.g. Flask's make_response vs Django's HttpResponse)
             return (
                 response.schema_or_inpoly.dump(data, many=isinstance(data, Iterable)) if response.schema_or_inpoly else "",
                 status_code
@@ -102,11 +106,10 @@ def use_response(
     return decorator
 
 
-def use_empty_response(**kwargs):
+def use_empty_response(**kwargs) -> Callable[..., Callable]:
     '''Convenience decorator for registering an empty response to a view method
     
     Args:
         **kwargs: Any keyword arguments accepted by :func:`use_response`
     '''
     return use_response(None, **kwargs)
-
