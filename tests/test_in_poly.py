@@ -126,11 +126,15 @@ class TestOneOf(TestInPoly):
         with pytest.raises(in_poly.OneOfValidationError):
             oneof(request)
 
-    @staticmethod
-    @pytest.mark.parametrize("valid_index", (0, 1, 2))
-    def test_call(ensure_schema_or_inpoly: MagicMock, valid_index: int):
+    schema_indeces = (0, 1, 2)
+
+    @pytest.mark.parametrize("valid_index", schema_indeces)
+    def test_call(self, ensure_schema_or_inpoly: MagicMock, valid_index: int):
         request = MagicMock(spec=Request)
-        schemas = tuple(MagicMock(spec=Schema, **{"validate.return_value": ("validation_error")}) for _ in range(3))
+        schemas = tuple(
+            MagicMock(spec=Schema, **{"validate.return_value": ("validation_error")})
+            for _ in range(len(self.schema_indeces))
+        )
         valid_schema = schemas[valid_index]
         valid_schema.validate.return_value = ()
         ensure_schema_or_inpoly.side_effect = schemas
@@ -166,11 +170,14 @@ class TestOneOf(TestInPoly):
         with pytest.raises(in_poly.OneOfValidationError):
             oneof.dump(obj)
 
-    @staticmethod
-    @pytest.mark.parametrize("valid_index", (0, 1, 2))
-    def test_dump(ensure_schema_or_inpoly: MagicMock, valid_index: int):
+
+    @pytest.mark.parametrize("valid_index", schema_indeces)
+    def test_dump(self, ensure_schema_or_inpoly: MagicMock, valid_index: int):
         obj = "obj"
-        schemas = tuple(MagicMock(spec=Schema, **{"validate.return_value": ("validation_error")}) for _ in range(3))
+        schemas = tuple(
+            MagicMock(spec=Schema, **{"validate.return_value": ("validation_error")})
+            for _ in range(len(self.schema_indeces))
+        )
         valid_schema = schemas[valid_index]
         valid_schema.validate.return_value = ()
         ensure_schema_or_inpoly.side_effect = schemas
@@ -183,3 +190,252 @@ class TestOneOf(TestInPoly):
             schema.validate.assert_called_once_with(schema.dump.return_value)
 
         assert result == valid_schema.dump.return_value
+
+
+class TestAnyOf(TestInPoly):
+    test_class = in_poly.AnyOf
+
+    @staticmethod
+    def test_attrs_post_init(mocker: MockerFixture):
+        anyof = in_poly.AnyOf()
+        spy = mocker.spy(anyof, "_determine_shared_keys_to_schemas")
+
+        anyof.__attrs_post_init__()
+
+        spy.assert_called_once()
+
+    @staticmethod
+    def test_call_validation_error(ensure_schema_or_inpoly: MagicMock):
+        request = MagicMock(spec=Request)
+        schemas = tuple(
+            MagicMock(spec=Schema, fields={"test_field": ""}, **{"load.side_effect": ValidationError("")})
+            for _ in range(2)
+        )
+        ensure_schema_or_inpoly.side_effect = schemas
+        anyof = in_poly.AnyOf(*schemas)
+
+        with pytest.raises(in_poly.AnyOfValidationError):
+            anyof(request)
+
+    @staticmethod
+    def test_call_conflict_error(ensure_schema_or_inpoly: MagicMock):
+        request = MagicMock(spec=Request)
+        schemas = tuple(
+            MagicMock(spec=Schema, fields={"test_field": ""}, **{"load.return_value": {"test_field": x}})
+            for x in range(2)
+        )
+        ensure_schema_or_inpoly.side_effect = schemas
+        anyof = in_poly.AnyOf(*schemas)
+
+        with pytest.raises(in_poly.AnyOfConflictError):
+            anyof(request)
+
+    @staticmethod
+    @pytest.mark.parametrize("multiple", (
+        pytest.param(True, id="multiple valid schemas"),
+        pytest.param(False, id="single valid schema"),
+    ))
+    def test_call(mocker: MockerFixture, ensure_schema_or_inpoly: MagicMock, multiple: bool):
+        request = MagicMock(spec=Request)
+        shared_keys = {"test_field": ""}
+        first_schema_fields = {**shared_keys, "first": ""}
+        second_schema_fields = {**shared_keys, "second": ""}
+        if multiple: second_schema_kwargs = {"load.return_value": second_schema_fields}
+        else: second_schema_kwargs = {"load.side_effect": ValidationError("")}
+        schemas = (
+            MagicMock(spec=Schema, fields=first_schema_fields, **{"load.return_value": first_schema_fields}),
+            MagicMock(spec=Schema, fields=second_schema_fields, **second_schema_kwargs),
+        )
+        ensure_schema_or_inpoly.side_effect = schemas
+        schema_class_mock = mocker.patch.object(in_poly, "Schema")
+        expected_schema_dict = {**shared_keys, "first": ""}
+        if multiple: expected_schema_dict["second"] = ""
+        anyof = in_poly.AnyOf(*schemas)
+
+        result = anyof(request)
+
+        for schema in schemas:
+            schema.load.assert_called_once_with(request.json, unknown=EXCLUDE)
+
+        schema_class_mock.from_dict.assert_called_once_with(expected_schema_dict)
+        schema_class_mock.from_dict.return_value.assert_called_once_with()
+        assert result == schema_class_mock.from_dict.return_value.return_value
+
+    @staticmethod
+    def test_dump_validation_error(ensure_schema_or_inpoly: MagicMock):
+        obj = "obj"
+        schemas = (
+            MagicMock(spec=Schema, fields={"test_field": ""}, **{"dump.side_effect": ValueError}),
+            MagicMock(spec=Schema, fields={"test_field": ""}, **{"validate.return_value": ("validation_error")}),
+        )
+        ensure_schema_or_inpoly.side_effect = schemas
+        anyof = in_poly.AnyOf(*schemas)
+
+        with pytest.raises(in_poly.AnyOfValidationError):
+            anyof.dump(obj)
+
+    @staticmethod
+    def test_dump_conflict_error(ensure_schema_or_inpoly: MagicMock):
+        obj = "obj"
+        schemas = tuple(
+            MagicMock(spec=Schema, fields={"test_field": ""}, **{"dump.return_value": {"test_field": x}})
+            for x in range(2)
+        )
+        ensure_schema_or_inpoly.side_effect = schemas
+        anyof = in_poly.AnyOf(*schemas)
+
+        with pytest.raises(in_poly.AnyOfConflictError):
+            anyof.dump(obj)
+
+    @staticmethod
+    @pytest.mark.parametrize("multiple", (
+        pytest.param(True, id="multiple valid schemas"),
+        pytest.param(False, id="single valid schema"),
+    ))
+    def test_dump(ensure_schema_or_inpoly: MagicMock, multiple: bool):
+        obj = "obj"
+        shared_keys = {"test_field": ""}
+        first_schema_fields = {**shared_keys, "first": ""}
+        second_schema_fields = {**shared_keys, "second": ""}
+        # To make sure invalid schemas are excluded from conflicting keys check
+        invalid_schema_fields = {"test_field": "invalid", "third": ""}
+        if multiple: second_schema_kwargs = {"dump.return_value": second_schema_fields}
+        else: second_schema_kwargs = {"dump.side_effect": ValueError}
+        schemas = (
+            MagicMock(spec=Schema, fields=first_schema_fields, **{"dump.return_value": first_schema_fields}),
+            MagicMock(spec=Schema, fields=second_schema_fields, **second_schema_kwargs),
+            MagicMock(spec=Schema, fields=invalid_schema_fields, **{"dump.side_effect": ValueError})
+        )
+        ensure_schema_or_inpoly.side_effect = schemas
+        expected_result = {**shared_keys, "first": ""}
+        if multiple: expected_result["second"] = ""
+        anyof = in_poly.AnyOf(*schemas)
+
+        result = anyof.dump(obj)
+
+        for schema in schemas:
+            schema.dump.assert_called_once_with(obj)
+
+        schemas[0].validate.assert_called_once_with(schemas[0].dump.return_value)
+        if multiple: schemas[1].validate.assert_called_once_with(schemas[1].dump.return_value)
+        assert result == expected_result
+
+
+class TestAllOf(TestInPoly):
+    test_class = in_poly.AllOf
+
+    @staticmethod
+    def test_attrs_post_init(mocker: MockerFixture):
+        allof = in_poly.AllOf()
+        spy = mocker.spy(allof, "_determine_shared_keys_to_schemas")
+
+        allof.__attrs_post_init__()
+
+        spy.assert_called_once()
+
+    @staticmethod
+    def test_call_validation_error(ensure_schema_or_inpoly: MagicMock):
+        request = MagicMock(spec=Request)
+        schemas = tuple(
+            MagicMock(spec=Schema, fields={"test_field": ""}, **{"load.return_value": {"test_field": ""}})
+            for _ in range(3)
+        )
+        schemas[-1].load.side_effect = ValidationError("")
+        ensure_schema_or_inpoly.side_effect = schemas
+        allof = in_poly.AllOf(*schemas)
+
+        with pytest.raises(in_poly.AllOfValidationError):
+            allof(request)
+
+    @staticmethod
+    def test_call_conflict_error(ensure_schema_or_inpoly: MagicMock):
+        request = MagicMock(spec=Request)
+        schemas = tuple(
+            MagicMock(spec=Schema, fields={"test_field": ""}, **{"load.return_value": {"test_field": x}})
+            for x in range(2)
+        )
+        ensure_schema_or_inpoly.side_effect = schemas
+        allof = in_poly.AllOf(*schemas)
+
+        with pytest.raises(in_poly.AllOfConflictError):
+            allof(request)
+
+    @staticmethod
+    def test_call(mocker: MockerFixture, ensure_schema_or_inpoly: MagicMock):
+        request = MagicMock(spec=Request)
+        shared_keys = {"test_field": ""}
+        first_schema_fields = {**shared_keys, "first": ""}
+        second_schema_fields = {**shared_keys, "second": ""}
+        schemas = (
+            MagicMock(spec=Schema, fields=first_schema_fields, **{"load.return_value": first_schema_fields}),
+            MagicMock(spec=Schema, fields=second_schema_fields, **{"load.return_value": second_schema_fields}),
+        )
+        ensure_schema_or_inpoly.side_effect = schemas
+        schema_class_mock = mocker.patch.object(in_poly, "Schema")
+        expected_schema_dict = {**first_schema_fields, **second_schema_fields}
+        allof = in_poly.AllOf(*schemas)
+
+        result = allof(request)
+
+        for schema in schemas:
+            schema.load.assert_called_once_with(request.json, unknown=EXCLUDE)
+
+        schema_class_mock.from_dict.assert_called_once_with(expected_schema_dict)
+        schema_class_mock.from_dict.return_value.assert_called_once_with()
+        assert result == schema_class_mock.from_dict.return_value.return_value
+
+    @staticmethod
+    @pytest.mark.parametrize("cause", ("dump", "validate"))
+    def test_dump_validation_error(ensure_schema_or_inpoly: MagicMock, cause: str):
+        obj = "obj"
+        schema_kwargs = {"dump.return_value": {"test_field": ""}, "validate.return_value": ()}
+        schemas = tuple(
+            MagicMock(spec=Schema, fields={"test_field": ""}, **schema_kwargs)
+            for _ in range(2)
+        )
+        if cause == "dump": schemas[-1].dump.side_effect = ValueError
+        if cause == "validate": schemas[-1].validate.return_value = ("validation_error")
+        ensure_schema_or_inpoly.side_effect = schemas
+        allof = in_poly.AllOf(*schemas)
+
+        with pytest.raises(in_poly.AllOfValidationError):
+            allof.dump(obj)
+
+    @staticmethod
+    def test_dump_conflict_error(ensure_schema_or_inpoly: MagicMock):
+        obj = "obj"
+        schemas = tuple(
+            MagicMock(
+                spec=Schema,
+                fields={"test_field": ""},
+                **{"validate.return_value": (), "dump.return_value": {"test_field": x}}
+            ) for x in range(2)
+        )
+        ensure_schema_or_inpoly.side_effect = schemas
+        allof = in_poly.AllOf(*schemas)
+
+        with pytest.raises(in_poly.AllOfConflictError):
+            allof.dump(obj)
+
+    @staticmethod
+    def test_dump(ensure_schema_or_inpoly: MagicMock):
+        obj = "obj"
+        shared_keys = {"test_field": ""}
+        first_schema_fields = {**shared_keys, "first": ""}
+        second_schema_fields = {**shared_keys, "second": ""}
+        schemas = (
+            MagicMock(spec=Schema, fields=first_schema_fields, **{"dump.return_value": first_schema_fields}),
+            MagicMock(spec=Schema, fields=second_schema_fields, **{"dump.return_value": second_schema_fields}),
+        )
+        for schema in schemas: schema.validate.return_value = ()
+        ensure_schema_or_inpoly.side_effect = schemas
+        expected_result = {**first_schema_fields, **second_schema_fields}
+        allof = in_poly.AllOf(*schemas)
+
+        result = allof.dump(obj)
+
+        for schema in schemas:
+            schema.dump.assert_called_once_with(obj, many = False)
+            schema.validate.assert_called_once_with(schema.dump.return_value)
+
+        assert result == expected_result
