@@ -36,7 +36,7 @@ def _add_content_hook(response: Response) -> dict:
         Response,
         converter=con,
         headers=override(omit_if_default=True),
-        schema=override(omit=True),
+        schema_or_inpoly=override(omit=True),
     )(response)
     if response.schema_or_inpoly: out_dict["content"] = con.unstructure(response.content)
     return out_dict
