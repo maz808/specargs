@@ -3,13 +3,12 @@ from typing import Dict, Union, List
 
 from werkzeug import routing
 from flask.views import MethodView
-from apispec.ext.marshmallow import MarshmallowPlugin
+from apispec.ext.marshmallow import MarshmallowPlugin, SchemaResolver
 from apispec_webframeworks.flask import FlaskPlugin
 from marshmallow import Schema
-from webargs.core import ArgMap
+from webargs import fields
 
-from .common import ensure_schema_or_inpoly, con
-from .decorators import Webargs
+from .common import con, Webargs
 from .oas import Response
 from .in_poly import InPoly
 from .validate import MultipleOf
@@ -80,8 +79,17 @@ def field2multipleOf(_, field, **kwargs):
     return {"multipleOf": math.prod(relevant_values)}
 
 
+class WebargsScehamResolver(SchemaResolver):
+    def resolve_schema_dict(self, schema):
+        if isinstance(schema, fields.Field):
+            return self.converter.field2property(schema)
+        return super().resolve_schema_dict(schema)
+
 
 class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
+    '''TODO: Add docstring for WebargsFlaskPlugin'''
+    Resolver = WebargsScehamResolver
+
     def __init__(self):
         # Pass in lambda that returns None to completely disable schema name resolution. References to a Schema should
         # only be resolvable if the Schema has been registered in the spec using `APISpec.components.schema`
@@ -102,31 +110,24 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
         # An empty dict is passed into the operations argument to circumvent FlaskPlugin's operations changes
         return super().path_helper(operations={}, view=view, app=app, **kwargs)
 
-    def _content_from_schema(self, schema_or_inpoly: Union[Schema, InPoly]) -> dict:
-        schema_dict = (
-            self.resolver.resolve_schema_dict(schema_or_inpoly) if isinstance(schema_or_inpoly, Schema) else
-            self.resolver.resolve_schema_dict(con.unstructure(schema_or_inpoly))
-        )
+    def _content_from_schema_or_inpoly(self, schema_or_inpoly: Union[Schema, InPoly]) -> dict:
+        if isinstance(schema_or_inpoly, InPoly): schema_or_inpoly = con.unstructure(schema_or_inpoly)
         return {
             "content": {
                 "application/json": {
-                    "schema": schema_dict
+                    "schema": self.resolver.resolve_schema_dict(schema_or_inpoly)
                 }
             }
         }
 
-    def _requestBody_from_schema(self, schema: Schema):
+    def _request_body_from_schema_or_inpoly(self, schema_or_inpoly: Union[Schema, InPoly]) -> dict:
         request_body_dict = {"required": True}
-        request_body_dict.update(self._content_from_schema(schema))
+        request_body_dict.update(self._content_from_schema_or_inpoly(schema_or_inpoly))
         return {"requestBody": request_body_dict}
 
-    def _operation_input_data_from_schema(self, schema: Schema, *, location: str):
-        return (self._requestBody_from_schema(schema) if location == "json" else
-            {"parameters": self.converter.schema2parameters(schema, location=location)})
-
-    def _operation_input_data_from_argmap(self, argmap: ArgMap, *, location: str):
-        argmap = ensure_schema_or_inpoly(argmap)
-        return self._operation_input_data_from_schema(argmap, location=location)
+    def _operation_input_data_from_webargs(self, webargs: Webargs):
+        return (self._request_body_from_schema_or_inpoly(webargs.schema_or_inpoly) if webargs.location == "json" else
+            {"parameters": self.converter.schema2parameters(webargs.schema_or_inpoly, location=webargs.location)})
 
     def _operation_output_data_from_response(self, response: Response):
         response_id = self.spec.response_refs.get(response)
@@ -141,7 +142,7 @@ class WebargsFlaskPlugin(MarshmallowPlugin, FlaskPlugin):
             if not isinstance(webargs, Webargs):
                 raise TypeError("The webargs attribute should be a list of only decorators.Webargs!")
             operations[method_name].update(
-                self._operation_input_data_from_argmap(webargs.argpoly, location=webargs.location)
+                self._operation_input_data_from_webargs(webargs)
             )
 
         responses = {

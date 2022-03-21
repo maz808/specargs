@@ -1,22 +1,16 @@
-from collections.abc import Iterable
 import functools
 from http import HTTPStatus
 from typing import Callable, Optional, Union
 
-from attrs import frozen
+from attrs import frozen, field
+from marshmallow import Schema
 
-from .common import ArgMap, ensure_schema_or_inpoly
+from .common import ArgMap, ensure_schema_or_inpoly, Webargs
 from .in_poly import InPoly
 from .oas import Response, ensure_response
 
 # TODO: Import parser depending on frawework in venv
 from webargs.flaskparser import parser
-
-
-@frozen
-class Webargs:
-    argpoly: Union[ArgMap, InPoly]
-    location: str
 
 
 def use_args(argpoly: Union[ArgMap, InPoly], *args, location: str = parser.DEFAULT_LOCATION, **kwargs) -> Callable[..., Callable]:
@@ -38,12 +32,10 @@ def use_args(argpoly: Union[ArgMap, InPoly], *args, location: str = parser.DEFAU
     if isinstance(argpoly, InPoly) and location != "json":
         raise ValueError("OneOf, AnyOf, and AllOf are only compatible with json body parameters!")
 
-    schema_or_inpoly = ensure_schema_or_inpoly(argpoly)
-
     def decorator(func):
         func.webargs = getattr(func, "webargs", [])
-        func.webargs.append(Webargs(schema_or_inpoly, location))
-        inner_decorator = parser.use_args(schema_or_inpoly, *args, location = location, **kwargs)
+        func.webargs.append(Webargs(argpoly, location))
+        inner_decorator = parser.use_args(argpoly, *args, location = location, **kwargs)
         return inner_decorator(func)
 
     return decorator
@@ -94,12 +86,8 @@ def use_response(
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             data = func(*args, **kwargs)
-            # TODO: Allow response types other than Schema (i.e. Field)
             # TODO: Determine return value based on framework (e.g. Flask's make_response vs Django's HttpResponse)
-            return (
-                response.schema_or_inpoly.dump(data, many=isinstance(data, Iterable)) if response.schema_or_inpoly else "",
-                status_code
-            )
+            return (response.dump(data), status_code)
 
         return wrapper
 

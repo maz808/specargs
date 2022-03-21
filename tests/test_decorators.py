@@ -34,37 +34,34 @@ def test_use_args_inpoly_invalid_location():
 
 def test_use_args_invalid_argpoly(ensure_schema_or_inpoly_error: MagicMock):
     with pytest.raises(TypeError):
-        decorators.use_args("argpoly")
+        decorators.use_args("invalid")(lambda: "WRAP ME!")
 
 
 @pytest.mark.parametrize("with_location", (
     pytest.param(True, id="With location"),
     pytest.param(False, id="Without location"),
 ))
-def test_use_args(ensure_schema_or_inpoly: MagicMock, parser: MagicMock, with_location: bool):
+def test_use_args(mocker: MockerFixture, parser: MagicMock, with_location: bool):
     argpoly = "argpoly"
     args = ("these", "don't", "matter")
     kwargs = {"also": "really", "don't": "matter"}
     if with_location: kwargs["location"] = "location"
     func = lambda: "WRAP ME!"
+    Webargs = mocker.patch.object(decorators, "Webargs", autospec=True)
 
-    decorator = decorators.use_args(argpoly, *args, **kwargs)
-
-    ensure_schema_or_inpoly.assert_called_once_with(argpoly)
-
-    func = decorator(func)
+    func = decorators.use_args(argpoly, *args, **kwargs)(func)
 
     expected_location = kwargs.pop("location", parser.DEFAULT_LOCATION)
-
+    Webargs.assert_called_once_with(argpoly, expected_location)
     parser.use_args.assert_called_once_with(
-        ensure_schema_or_inpoly.return_value,
+        argpoly,
         *args,
         location=expected_location,
         **kwargs
     )
     parser.use_args.return_value.assert_called_once_with(func)
     assert func.decorated
-    assert func.webargs == [decorators.Webargs(ensure_schema_or_inpoly.return_value, expected_location)]
+    assert func.webargs == [Webargs.return_value]
 
 
 def test_use_kwargs(mocker: MockerFixture):
@@ -78,14 +75,9 @@ def test_use_kwargs(mocker: MockerFixture):
     assert decorator == use_args.return_value
 
 
-@pytest.fixture(params=(
-    pytest.param(True, id="response.schema True"),
-    pytest.param(False, id="response.schema False"),
-))
-def ensure_response(mocker: MockerFixture, request: SubRequest):
-    mock = mocker.patch.object(decorators, "ensure_response", autospec=True)
-    if not(request.param): mock.return_value.schema_or_inpoly = None
-    return mock
+@pytest.fixture
+def ensure_response(mocker: MockerFixture):
+    return mocker.patch.object(decorators, "ensure_response", autospec=True)
 
 
 def test_use_response_duplicate_response_code(ensure_response: MagicMock):
@@ -134,14 +126,8 @@ def test_use_response(ensure_response: MagicMock, with_status_code: bool, with_d
     output = wrapped_func(*args, **kwargs)
 
     func.assert_called_once_with(*args, **kwargs)
-
-    schema_or_inpoly = response.schema_or_inpoly
-    expected_value = ""
-    if schema_or_inpoly:
-        schema_or_inpoly.dump.assert_called_once_with(func.return_value, many=isinstance(func.return_value, Iterable))
-        expected_value = schema_or_inpoly.dump.return_value
-
-    assert output == (expected_value, expected_status_code)
+    response.dump.assert_called_once_with(func.return_value)
+    assert output == (response.dump.return_value, expected_status_code)
 
 
 def test_use_empty_response(mocker: MockerFixture):

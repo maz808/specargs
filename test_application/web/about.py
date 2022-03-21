@@ -8,9 +8,12 @@ bp = Blueprint("about-api", __name__, url_prefix="/about")
 
 @bp.get("")
 @use_kwargs({"details": fields.Bool()})
-@use_response({"about": fields.String()})
+# @use_response({"about": fields.String()})
+@use_response(fields.List(fields.String()))
 def get_about():
-    return {"about": "THIS IS THE ABOUT"}
+    # return {"about": "THIS IS THE ABOUT"}
+    # return "THIS IS THE ABOUT"
+    return "THIS IS THE ABOUT".encode("utf-8")
 
 
 @bp.post("")

@@ -1,7 +1,29 @@
 from marshmallow import fields, Schema
 import pytest
+from unittest.mock import MagicMock
 
 from apispec_webargs import common, OneOf
+
+
+MODULE_TO_TEST = common
+
+
+class TestWebargs:
+    @staticmethod
+    def test_init_error(ensure_schema_or_inpoly_error: MagicMock):
+        with pytest.raises(TypeError):
+            common.Webargs("argpoly", "location")
+
+    @staticmethod
+    def test_init(ensure_schema_or_inpoly: MagicMock):
+        argpoly = "argpoly"
+        location = "location"
+
+        webargs = common.Webargs(argpoly, location)
+
+        ensure_schema_or_inpoly.assert_called_once_with(argpoly)
+        assert webargs.schema_or_inpoly == ensure_schema_or_inpoly.return_value
+        assert webargs.location == location
 
 
 @pytest.mark.parametrize("obj", (
@@ -24,25 +46,16 @@ def test_ensure_schema_or_inpoly_dict():
     assert all(repr(obj[field_name]) == repr(result.fields[field_name]) for field_name in obj)
 
 
-class TestSchema(Schema):
+class SchemaForTests(Schema):
     pass
 
 
-def _test_schema_factory():
-    return TestSchema()
-
-
-@pytest.mark.parametrize("schema_class_or_factory", (
-    pytest.param(TestSchema, id="Schema class"),
-    pytest.param(_test_schema_factory, id="Schema factory"),
-))
-def test_ensure_schema_or_inpoly_schema_class(schema_class_or_factory):
-    result = common.ensure_schema_or_inpoly(schema_class_or_factory)
-    assert isinstance(result, TestSchema)
+def test_ensure_schema_or_inpoly_schema_class():
+    result = common.ensure_schema_or_inpoly(SchemaForTests)
+    assert isinstance(result, SchemaForTests)
 
 
 @pytest.mark.parametrize("invalid", (
-    pytest.param((lambda x: Schema()), id="Invalid Schema factory"),
     pytest.param((lambda: "invalid"), id="Invalid callable"),
     pytest.param("invalid", id="Invalid type"),
 ))

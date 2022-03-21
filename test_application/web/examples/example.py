@@ -27,6 +27,7 @@ class ExampleSchema(Schema):
     name = fields.Str()
     sub = fields.Nested("ExampleSchema", allow_none=True)
     req = fields.String(required=True)
+    ex_list = fields.List(fields.String)
 
 
 @spec.schema("Other")
