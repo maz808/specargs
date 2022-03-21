@@ -1,5 +1,6 @@
-from inspect import signature
+from enum import Enum, auto
 from typing import Dict, Union, TYPE_CHECKING, Type
+import sys
 
 from attrs import field, frozen
 from cattrs import GenConverter
@@ -12,6 +13,32 @@ if TYPE_CHECKING:
 else:
     InPoly = "InPoly"
 
+
+class Framework(Enum):
+    FLASK = auto()
+    DJANGO = auto()
+    TORNADO = auto()
+    BOTTLE = auto()
+
+
+class MissingFrameworkError(Exception):
+    '''Raised when the project environment has not installed a supported framework'''
+    pass
+
+
+def _determine_framework():
+    if "flask" in sys.modules:
+        return Framework.FLASK
+    if "django" in sys.modules:
+        return Framework.DJANGO
+    if "tornado" in sys.modules:
+        return Framework.TORNADO
+    if "bottle" in sys.modules:
+        return Framework.BOTTLE
+    raise MissingFrameworkError("A supported web framework (e.g. Flask, Django, etc.) must be installed!")
+
+
+FRAMEWORK = _determine_framework()
 
 ArgMap = Union[Schema, Dict[str, Union[fields.Field, Type[fields.Field]]], Type[Schema]]
 
@@ -42,4 +69,3 @@ def ensure_schema_or_inpoly(argpoly: Union[ArgMap, InPoly]) -> Union[Schema, InP
     if isinstance(argpoly, dict): return parser.schema_class.from_dict(argpoly)()
     if isinstance(argpoly, type(Schema)): return argpoly()
     raise TypeError(f"Unable to produce Schema or InPoly from {argpoly}!")
-
