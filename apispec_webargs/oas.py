@@ -25,7 +25,18 @@ def ensure_field_schema_or_inpoly(
 
 @frozen(eq=False)
 class Response:
-    '''TODO: Write docstring for Response'''
+    '''Stores metadata representing a reusable OpenAPI specification response object
+
+    The :attr:`schema` attribute of this class is also used for data serialization when provided
+    :func:`apispec_webargs.use_response`
+
+    Attributes:
+        schema: A :class:`marshmallow.Schema`, an :class:`~apispec_webargs.in_poly.InPoly` object, or a
+            :class:`marshmallow.fields.Field`. Determines the `content` of the generated OpenAPI response object. Also
+            determines serialization of response data when provided to :func:`apispec_webargs.use_response`
+        description: The response description
+        headers: A dictionary of response header names to values
+    '''
     schema: Optional[Union[Schema, InPoly, fields.Field]] = field(
         converter=converters.optional(lambda obj: ensure_field_schema_or_inpoly(obj)))
     description: str = ""
@@ -33,28 +44,31 @@ class Response:
 
     def __init__(
         self,
-        argpoly_or_field: Optional[Union[ArgMap, InPoly]],
+        argpoly_or_field: Optional[Union[ArgMap, InPoly, fields.Field]],
         *,
         description: str = "",
-        headers: Tuple[Tuple[str, str]] = None
+        headers: Dict[str, str] = None
     ):
+        '''Initializes a :class:`Response` object
+        
+        Args:
+            argpoly_or_field: An :class:`~apispec_webargs.in_poly.InPoly` object, a :class:`marshmallow.Schema` class or instance, a
+                dictionary of names to :mod:`marshmallow.fields`, or `None`. Determines the content of the corresponding
+                `response` clause in the generated OpenAPI spec and whether/how the data returned by the decorated view
+                function/method is serialized
+            description: The response object description
+            headers: A dictionary of response header names to values
+        '''
         self.__attrs_init__(schema=argpoly_or_field, description=description, headers=headers or {})
 
     @property
-    def content(self):
-        '''TODO: Write docstring for Response.content'''
+    def content(self) -> dict:
+        '''A dictionary that represents the `content` section of the generated OpenAPI response object'''
         content_type = (
             "application/json" if isinstance(self.schema, Schema) or isinstance(self.schema, InPoly) else
             "text/html"
         )
         return {content_type: {"schema": self.schema}}
-
-    def dump(self, obj: Any) -> dict:
-        schema = self.schema
-        is_list_tuple_or_set = any(isinstance(obj, type_) for type_ in (list, tuple, set))
-        if isinstance(schema, Schema) or isinstance(schema, InPoly): return schema.dump(obj, many=is_list_tuple_or_set)
-        if isinstance(schema, fields.Field): return schema.serialize("unused", obj, lambda o, *_: o)
-        if schema is None: return ""
 
 
 # Omit `schema` and default attributes and include `content` property if `schema` is trueish when converting to a dict

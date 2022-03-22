@@ -6,7 +6,7 @@ from apispec import APISpec
 from marshmallow import Schema
 from webargs.core import ArgMap
 
-from .common import FRAMEWORK, Framework, MissingFrameworkError
+from .common import FRAMEWORK, Framework
 from .in_poly import InPoly
 from .oas import Response, ensure_response
 

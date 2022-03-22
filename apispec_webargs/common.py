@@ -1,12 +1,12 @@
 from enum import Enum, auto
+import os
 from typing import Dict, Union, TYPE_CHECKING, Type
 import sys
 
 from attrs import field, frozen
 from cattrs import GenConverter
 from marshmallow import Schema, fields
-
-from webargs.flaskparser import parser
+import webargs.core
 
 if TYPE_CHECKING:
     from in_poly import InPoly
@@ -15,10 +15,10 @@ else:
 
 
 class Framework(Enum):
-    FLASK = auto()
-    DJANGO = auto()
-    TORNADO = auto()
-    BOTTLE = auto()
+    FLASK = "flask"
+    DJANGO = "django"
+    TORNADO = "tornado"
+    BOTTLE = "bottle"
 
 
 class MissingFrameworkError(Exception):
@@ -26,19 +26,32 @@ class MissingFrameworkError(Exception):
     pass
 
 
+class MultipleFrameworkError(Exception):
+    '''Raised when the project environment has installed multiple supported frameworks'''
+    pass
+
+
 def _determine_framework():
-    if "flask" in sys.modules:
-        return Framework.FLASK
-    if "django" in sys.modules:
-        return Framework.DJANGO
-    if "tornado" in sys.modules:
-        return Framework.TORNADO
-    if "bottle" in sys.modules:
-        return Framework.BOTTLE
-    raise MissingFrameworkError("A supported web framework (e.g. Flask, Django, etc.) must be installed!")
+    active_framework = None
+    for framework in Framework:
+        if framework.value in sys.modules:
+            if active_framework:
+                raise MultipleFrameworkError("Multiple frameworks in the environment is not supported!")
+            active_framework = framework
+
+    if not active_framework:
+        raise MissingFrameworkError("A supported web framework (e.g. Flask, Django, etc.) must be installed!")
+
+    return active_framework
 
 
-FRAMEWORK = _determine_framework()
+FRAMEWORK = _determine_framework() if not os.environ.get("ASWA_DOCS", False) else None
+
+if not FRAMEWORK: parser = webargs.core.Parser()
+elif FRAMEWORK == Framework.FLASK: from webargs.flaskparser import parser
+elif FRAMEWORK == Framework.DJANGO: from webargs.djangoparser import parser
+elif FRAMEWORK == Framework.TORNADO: from webargs.tornadoparser import parser
+elif FRAMEWORK == Framework.BOTTLE: from webargs.bottleparser import parser
 
 ArgMap = Union[Schema, Dict[str, Union[fields.Field, Type[fields.Field]]], Type[Schema]]
 

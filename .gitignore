@@ -9,3 +9,4 @@ __pycache__/
 
 # Project specific
 out_spec.yaml
+docs/build

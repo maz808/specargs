@@ -13,12 +13,20 @@ apispec-webframeworks = "^0.5.2"
 attrs = "^21.4.0"
 cattrs = "^1.10.0"
 
+Sphinx = {version = "^4.4.0", optional = true}
+sphinx-book-theme = {version = "^0.2.0", optional = true}
+Flask = {version = "^2.0.3", optional = true}
+Flask-Cors = {version = "^3.0.10", optional = true}
+Django = {version = "^4.0.3", optional = true}
+
+[tool.poetry.extras]
+docs = ["Sphinx", "sphinx-book-theme"]
+flask = ["Flask", "Flask-Cors"]
+django = ["Django"]
+
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
-Flask-Cors = "^3.0.10"
-Flask = "^2.0.3"
 pytest-mock = "^3.7.0"
-Sphinx = "^4.4.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
