@@ -74,9 +74,7 @@ class WebargsAPISpec(APISpec, ABC):
             # This will result in an OAS schema with the name "Example"
             @spec.schema
             class ExampleSchema(marshmallow.Schema):
-                name = marshmallow.fields.String()
-                number = marshmallow.fields.Int()
-
+                ...
 
         #. As a :class:`marshmallow.Schema` class decorator with arguments::
 
@@ -86,7 +84,6 @@ class WebargsAPISpec(APISpec, ABC):
             @spec.schema("CustomName")
             class ExampleSchema(marshmallow.Schema):
                 ...
-
 
         #. As a method that accepts a :class:`marshmallow.Schema` class and optionally a string name::
 

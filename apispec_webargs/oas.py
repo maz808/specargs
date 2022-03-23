@@ -27,19 +27,15 @@ def ensure_field_schema_or_inpoly(
 class Response:
     '''Stores metadata representing a reusable OpenAPI specification response object
 
-    The :attr:`schema` attribute of this class is also used for data serialization when provided
+    The :attr:`schema` attribute of this class is also used for data serialization when provided to
     :func:`apispec_webargs.use_response`
-
-    Attributes:
-        schema: A :class:`marshmallow.Schema`, an :class:`~apispec_webargs.in_poly.InPoly` object, or a
-            :class:`marshmallow.fields.Field`. Determines the `content` of the generated OpenAPI response object. Also
-            determines serialization of response data when provided to :func:`apispec_webargs.use_response`
-        description: The response description
-        headers: A dictionary of response header names to values
     '''
+    #: A :class:`marshmallow.Schema`, an :class:`~apispec_webargs.in_poly.InPoly` object, or a :class:`marshmallow.fields.Field`. Determines the :attr:`~Response.content` of the generated OpenAPI response object. Also determines serialization of response data when provided to :func:`apispec_webargs.use_response`
     schema: Optional[Union[Schema, InPoly, fields.Field]] = field(
         converter=converters.optional(lambda obj: ensure_field_schema_or_inpoly(obj)))
+    #: The response description
     description: str = ""
+    #: A dictionary of the :class:`Response` header names to values
     headers: Dict[str, str] = Factory(dict)
 
     def __init__(

@@ -3,8 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to apispec-webargs' documentation!
-===========================================
+apispec-webargs
+===============
+
+**apispec-webargs** is a Python library for serializing and deserializing request and response data and generating
+OpenAPI Specification (OAS) files built upon :doc:`marshmallow <marshmallow:index>`, :doc:`apispec <apispec:index>`, and
+:doc:`webargs <webargs:index>`.
 
 .. toctree::
    :maxdepth: 1
