@@ -89,3 +89,10 @@ def ensure_response(
 ):
     if isinstance(response_or_argpoly, Response): return response_or_argpoly
     return Response(response_or_argpoly, description=description, headers=headers)
+
+
+@frozen
+class Tag:
+    name: str
+    description: str
+    # TODO: Determine the need for Tag.external_docs

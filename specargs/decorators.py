@@ -125,3 +125,6 @@ def use_empty_response(**kwargs) -> Callable[..., Callable]:
         **kwargs: Any keyword arguments accepted by :func:`use_response`
     '''
     return use_response(None, **kwargs)
+
+
+def use_tags(*tag_or_name: )
