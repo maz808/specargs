@@ -7,6 +7,7 @@ Spec/Plugin Objects
 .. autoclass:: specargs.WebargsAPISpec
    :members:
    :show-inheritance:
+   :inherited-members:
    :undoc-members:
 
 .. autoclass:: specargs.WebargsPlugin

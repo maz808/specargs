@@ -159,7 +159,7 @@ The above code snippets will all result in the same OpenAPI structure:
                     name:
                       type: string
                     age:
-                      type: int
+                      type: integer
 
 Adding Parameter Metadata to Operations
 ---------------------------------------
@@ -190,9 +190,65 @@ The above code snippet will result in this OpenAPI structure:
 Adding Response Metadata/Serialization
 --------------------------------------
 
-Building on :func:`~specargs.use_args` and :func:`~specargs.use_kwargs`, **specargs** provides
-another decorator function :func:`~specargs.use_response`. This function is also used as view function/method
-decorator.
+Building on :func:`~specargs.use_args` and :func:`~specargs.use_kwargs`, **specargs** provides another decorator
+function :func:`~specargs.use_response`, which attaches response metadata to view functions/methods for use by an
+instance of :class:`specargs.WebargsAPISpec`::
+
+    @dataclass
+    class User:
+        id: int
+        name: str
+        age: int
+
+
+    @app.get("/users/<int:user_id>")
+    @use_response(
+        {"id": fields.Integer(), "name": fields.String(), "age": fields.Integer()},
+        description="The requested user",
+    )
+    @use_response({}, status_code=HTTPStatus.NOT_FOUND) # Default status_code is HTTPStatus.OK (200)
+    def get_user(user_id: int):
+        return User(id=1, name="Joe", age=24)
+
+This will result in the following OAS structure:
+
+.. code-block:: yaml
+
+    paths:
+      /users/{user_id}:
+        parameters:
+          - in: path
+            name: user_id
+            required: true
+            schema:
+              type: integer
+        get:
+          responses:
+            200:
+              description: The requested user
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      id:
+                        schema:
+                          type: integer
+                      name:
+                        schema:
+                          type: string
+                      age:
+                        schema:
+                          type: integer
+            404:
+              description:
+
+
+While :func:`~specargs.use_args` and :func:`~specargs.use_kwargs` provide request data parsing,
+:func:`~specargs.use_args` provides response data serialization based on :doc:`marshmallow <marshmallow:index>`. In the
+above example, a Flask view function returns a `User` object, but because it's decorated with
+:func:`~specargs.use_response`, the `User` object is serialized into a dictionary before being returned and
+automatically jsonified into a :func:`flask.Response` object by Flask.
 
 Generating an OAS File
 ----------------------
