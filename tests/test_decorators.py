@@ -6,7 +6,7 @@ from _pytest.fixtures import SubRequest
 from unittest.mock import MagicMock
 from pytest_mock import MockerFixture
 
-from apispec_webargs import decorators, OneOf
+from specargs import decorators, OneOf
 
 
 MODULE_TO_TEST = decorators # Needed for shared pytest mock fixtures in conftest.py

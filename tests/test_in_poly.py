@@ -5,8 +5,8 @@ from marshmallow import Schema, fields, EXCLUDE, ValidationError
 import pytest
 from pytest_mock import MockerFixture
 
-from apispec_webargs import in_poly
-from apispec_webargs.common import con
+from specargs import in_poly
+from specargs.common import con
 
 from flask import Request
 

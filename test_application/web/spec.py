@@ -1,4 +1,4 @@
-from apispec_webargs import WebargsAPISpec, WebargsPlugin
+from specargs import WebargsAPISpec, WebargsPlugin
 
 
 spec = WebargsAPISpec(

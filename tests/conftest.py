@@ -2,7 +2,7 @@ import pytest
 from _pytest.fixtures import SubRequest
 from pytest_mock import MockerFixture
 
-from apispec_webargs import common
+from specargs import common
 
 @pytest.fixture
 def ensure_schema_or_inpoly(mocker: MockerFixture, request: SubRequest):

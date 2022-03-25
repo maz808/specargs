@@ -2,7 +2,7 @@ from marshmallow import fields, Schema
 import pytest
 from unittest.mock import MagicMock
 
-from apispec_webargs import common, OneOf
+from specargs import common, OneOf
 
 
 MODULE_TO_TEST = common

@@ -1,4 +1,4 @@
-from apispec_webargs import __version__
+from specargs import __version__
 
 
 def test_version():

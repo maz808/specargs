@@ -5,7 +5,7 @@ from flask.views import MethodView
 from marshmallow import Schema
 from webargs import fields, validate
 
-from apispec_webargs import use_response, use_kwargs, use_empty_response, AllOf, AnyOf, OneOf
+from specargs import use_response, use_kwargs, use_empty_response, AllOf, AnyOf, OneOf
 
 from .example import ExampleView, ExampleSchema, OtherSchema, Example
 from ..spec import spec

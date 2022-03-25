@@ -1,5 +1,5 @@
 from flask import Blueprint
-from apispec_webargs import use_kwargs, use_response, use_empty_response
+from specargs import use_kwargs, use_response, use_empty_response
 from webargs import fields
 
 

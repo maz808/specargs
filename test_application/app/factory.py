@@ -1,4 +1,4 @@
-from apispec_webargs import use_kwargs
+from specargs import use_kwargs
 from flask_cors import CORS
 from webargs import fields
 

@@ -5,7 +5,7 @@ from flask.views import MethodView
 from marshmallow import Schema
 from webargs import fields
 
-from apispec_webargs import use_response, use_kwargs, AnyOf
+from specargs import use_response, use_kwargs, AnyOf
 
 from ..spec import spec
 
