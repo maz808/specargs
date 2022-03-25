@@ -30,8 +30,8 @@ class InPoly(ABC):
     '''An abstract representation of the inheritance/polymorphism keywords of the OpenAPI Specification
 
     Subclasses of this class not only enable generation of correpsonding OpenAPI Specification clauses, but also data
-    deserialization when provided to :func:`~apispec_webargs.use_args` or :func:`~apispec_webargs.use_kwargs` and data
-    serialization when provided to :func:`~apispec_webargs.use_response`.
+    deserialization when provided to :func:`~specargs.use_args` or :func:`~specargs.use_kwargs` and data
+    serialization when provided to :func:`~specargs.use_response`.
     '''
     #: The marshmallow `Schema` instances that will be converted into members of the keyword and determine serialization and deserialization behavior
     schemas: Tuple[Schema] = field(converter=lambda objs: tuple(map(ensure_schema_or_inpoly, objs)))
@@ -41,10 +41,10 @@ class InPoly(ABC):
 
         Args:
             *argmaps: Dictionaries of marshmallow `Field` instances or marshmallow `Schema` instances or classes
-                provided as positional arguments. Converted into `Schema` instances and stored in :attr:`~apispec_webargs.in_poly.InPoly.schemas`
+                provided as positional arguments. Converted into `Schema` instances and stored in :attr:`~specargs.in_poly.InPoly.schemas`
 
         Raises:
-            :exc:`TypeError`: If any of the provided `argmaps` are :class:`~apispec_webargs.in_poly.InPoly` objects
+            :exc:`TypeError`: If any of the provided `argmaps` are :class:`~specargs.in_poly.InPoly` objects
         '''
         # TODO: Add support for nested `InPoly` objects
         if any(isinstance(schema, InPoly) for schema in argmaps):

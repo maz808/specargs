@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "apispec-webargs"
+name = "specargs"
 version = "0.1.0"
 description = ""
 authors = ["maz808 <mzamora808@gmail.com>"]

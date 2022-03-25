@@ -1,12 +1,12 @@
-.. apispec-webargs documentation master file, created by
+.. specargs documentation master file, created by
    sphinx-quickstart on Mon Feb 28 18:37:29 2022.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-apispec-webargs
+specargs
 ===============
 
-**apispec-webargs** is a Python library for serializing and deserializing request and response data and generating
+**specargs** is a Python library for serializing and deserializing request and response data and generating
 OpenAPI Specification (OAS) files built upon :doc:`marshmallow <marshmallow:index>`, :doc:`apispec <apispec:index>`, and
 :doc:`webargs <webargs:index>`.
 

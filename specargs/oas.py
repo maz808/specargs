@@ -28,9 +28,9 @@ class Response:
     '''Stores metadata representing a reusable OpenAPI specification response object
 
     The :attr:`schema` attribute of this class is also used for data serialization when provided to
-    :func:`apispec_webargs.use_response`
+    :func:`specargs.use_response`
     '''
-    #: A :class:`marshmallow.Schema`, an :class:`~apispec_webargs.in_poly.InPoly` object, or a :class:`marshmallow.fields.Field`. Determines the :attr:`~Response.content` of the generated OpenAPI response object. Also determines serialization of response data when provided to :func:`apispec_webargs.use_response`
+    #: A :class:`marshmallow.Schema`, an :class:`~specargs.in_poly.InPoly` object, or a :class:`marshmallow.fields.Field`. Determines the :attr:`~Response.content` of the generated OpenAPI response object. Also determines serialization of response data when provided to :func:`specargs.use_response`
     schema: Optional[Union[Schema, InPoly, fields.Field]] = field(
         converter=converters.optional(lambda obj: ensure_field_schema_or_inpoly(obj)))
     #: The response description
@@ -48,7 +48,7 @@ class Response:
         '''Initializes a :class:`Response` object
         
         Args:
-            argpoly_or_field: An :class:`~apispec_webargs.in_poly.InPoly` object, a :class:`marshmallow.Schema` class or instance, a
+            argpoly_or_field: An :class:`~specargs.in_poly.InPoly` object, a :class:`marshmallow.Schema` class or instance, a
                 dictionary of names to :mod:`marshmallow.fields`, or `None`. Determines the content of the corresponding
                 `response` clause in the generated OpenAPI spec and whether/how the data returned by the decorated view
                 function/method is serialized

@@ -1,19 +1,19 @@
 Installation
 ============
 
-To use apispec-webargs, install it in your project's virtual environment.
+To use specargs, install it in your project's virtual environment.
 
 pip
 ---
 
 .. code-block:: console
 
-    (.venv) $ pip install apispec-webargs
+    (.venv) $ pip install specargs
 
 Poetry
 ------
 
 .. code-block:: console
 
-    $ poetry add apispec-webargs
+    $ poetry add specargs
 

@@ -4,44 +4,44 @@ API
 Spec/Plugin Objects
 -------------------
 
-.. autoclass:: apispec_webargs.WebargsAPISpec
+.. autoclass:: specargs.WebargsAPISpec
    :members:
    :show-inheritance:
    :undoc-members:
 
-.. autoclass:: apispec_webargs.WebargsPlugin
+.. autoclass:: specargs.WebargsPlugin
    :special-members:
 
 View Function/Method Decorators
 -------------------------------
 
-.. autofunction:: apispec_webargs.use_args
+.. autofunction:: specargs.use_args
 
-.. autofunction:: apispec_webargs.use_kwargs
+.. autofunction:: specargs.use_kwargs
 
-.. autofunction:: apispec_webargs.use_response
+.. autofunction:: specargs.use_response
 
-.. autofunction:: apispec_webargs.use_empty_response
+.. autofunction:: specargs.use_empty_response
 
 Schema Inheritance/Polymorphism
 -------------------------------
 
-.. autoclass:: apispec_webargs.in_poly.InPoly
+.. autoclass:: specargs.in_poly.InPoly
    :members:
    :exclude-members: keyword
 
-.. autoclass:: apispec_webargs.OneOf
+.. autoclass:: specargs.OneOf
    :members:
    :member-order: bysource
    :show-inheritance:
    :special-members:
 
-.. autoclass:: apispec_webargs.AnyOf
+.. autoclass:: specargs.AnyOf
    :members:
    :show-inheritance:
    :special-members:
 
-.. autoclass:: apispec_webargs.AllOf
+.. autoclass:: specargs.AllOf
    :members:
    :show-inheritance:
    :special-members:
@@ -49,20 +49,20 @@ Schema Inheritance/Polymorphism
 Reusable Components
 -------------------
 
-.. autoclass:: apispec_webargs.Response
+.. autoclass:: specargs.Response
    :members:
 
 Exceptions
 ----------
 
-.. autoexception:: apispec_webargs.decorators.DuplicateResponseCodeError
+.. autoexception:: specargs.decorators.DuplicateResponseCodeError
    :special-members:
 
-.. automodule:: apispec_webargs.in_poly
+.. automodule:: specargs.in_poly
    :members:
    :exclude-members: InPoly, OneOf, AnyOf, AllOf
 
-.. .. automodule:: apispec_webargs
+.. .. automodule:: specargs
 ..    :members:
 ..    :imported-members:
 ..    :exclude-members: WebargsPlugin, WebargsAPISpec, Response

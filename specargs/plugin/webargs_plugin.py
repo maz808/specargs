@@ -14,7 +14,7 @@ from ..validate import MultipleOf
 
 def field2multipleOf(_, field, **kwargs):
     """Return the dictionary of OpenAPI field attributes for a set of
-    :class:`MultipleOf <apispec_webargs.MultipleOf>` validators.
+    :class:`MultipleOf <specargs.MultipleOf>` validators.
 
     :param Field field: A marshmallow field.
     :rtype: dict
@@ -56,7 +56,7 @@ class WebargsScehamResolver(SchemaResolver):
 class WebargsPlugin(MarshmallowPlugin, ABC):
     '''Generates OpenAPI specification components from decorated view functions/methods
     
-    An instance of this class should be given to an instance of :class:`~apispec_webargs.WebargsAPISpec` in order for
+    An instance of this class should be given to an instance of :class:`~specargs.WebargsAPISpec` in order for
     an OpenAPI spec to be generated from decorated view functions/methods. This class does not need to be interacted
     with otherwise.
     '''

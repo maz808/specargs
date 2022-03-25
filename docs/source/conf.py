@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'apispec-webargs'
+project = 'specargs'
 copyright = '2022, Manuel Zamora'
 author = 'Manuel Zamora'
 
@@ -73,7 +73,7 @@ exclude_patterns = []
 #
 html_theme = 'sphinx_book_theme'
 html_theme_options = {
-    'repository_url': 'https://github.com/maz808/apispec-webargs',
+    'repository_url': 'https://github.com/maz808/specargs',
     'use_repository_button': True,
 }
 

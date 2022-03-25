@@ -18,8 +18,8 @@ There are plans to support the following frameworks:
 Active Framework
 ----------------
 
-**apispec-webargs** checks the Python environment for the frameworks mentioned in :ref:`Supported Frameworks`. Usage of
-**apispec-webargs** is dependent on which of these frameworks is installed in the current environment. If more than one
+**specargs** checks the Python environment for the frameworks mentioned in :ref:`Supported Frameworks`. Usage of
+**specargs** is dependent on which of these frameworks is installed in the current environment. If more than one
 of these frameworks is detected, an error will be raised, as selection of a specific framework when multiple are present
 is currently not supported. If only one is detected, that framework is set as the active framework.
 
@@ -27,11 +27,11 @@ is currently not supported. If only one is detected, that framework is set as th
 Initializing a Specification
 ----------------------------
 
-Generating a specification is accomplished similarly to apispec. A :class:`~apispec_webargs.WebargsAPISpec` must
-be instantiated and provided an instance of :class:`~apispec_webargs.WebargsPlugin` using the `plugins`
+Generating a specification is accomplished similarly to apispec. A :class:`~specargs.WebargsAPISpec` must
+be instantiated and provided an instance of :class:`~specargs.WebargsPlugin` using the `plugins`
 keyword argument::
 
-    from apispec_webargs import WebargsAPISpec, WebargsPlugin
+    from specargs import WebargsAPISpec, WebargsPlugin
 
     spec = WebargsAPISpec(
         title="Example API Spec",
@@ -47,8 +47,8 @@ keyword argument::
 Adding Paths and Operations
 ---------------------------
 
-Adding paths with operations can be accomplished using the :meth:`~apispec_webargs.WebargsAPISpec.create_paths` method
-of the :class:`~apispec_webargs.WebargsAPISpec` class. This method accepts one argument, `framework_obj`. The type of
+Adding paths with operations can be accomplished using the :meth:`~specargs.WebargsAPISpec.create_paths` method
+of the :class:`~specargs.WebargsAPISpec` class. This method accepts one argument, `framework_obj`. The type of
 object accepted for this argument is dependent on the current active framework (as mentioned in :ref:`Active
 Framework`).  The frameworks and accepted objects are as follows:
 
@@ -57,7 +57,7 @@ Framework`).  The frameworks and accepted objects are as follows:
 For example, paths and operations can be generated from a Flask application like so::
 
     from flask import Flask
-    from apispec_webargs import WebargsAPISpec, WebargsPlugin
+    from specargs import WebargsAPISpec, WebargsPlugin
 
     app = Flask(__name__, static_folder=None)
     spec = WebargsAPISpec(..., plugins=[WebargsPlugin()])
@@ -71,7 +71,7 @@ For example, paths and operations can be generated from a Flask application like
 Adding Path Parameter Metadata
 ------------------------------
 
-When a `framework_obj` is passed to the :meth:`~apispec_webargs.WebargsAPISpec.create_paths`, view functions/methods and
+When a `framework_obj` is passed to the :meth:`~specargs.WebargsAPISpec.create_paths`, view functions/methods and
 thier corresponding url routing rules are extracted. These url rules are then converted into path parameter metadata for
 the generated paths of the output OpenAPI specification. Using Flask, for example::
 
@@ -102,14 +102,14 @@ The above code will result in the following OpenAPI path object:
 Adding Request Body Metadata to Operations
 ------------------------------------------
 
-As **apispec-webargs** is intended to provide a thin wrapper around :doc:`webargs:index`, it also provides
-:func:`~apispec_webargs.use_args` and :func:`~apispec_webargs.use_kwargs` decorator functions.  On top of the
+As **specargs** is intended to provide a thin wrapper around :doc:`webargs:index`, it also provides
+:func:`~specargs.use_args` and :func:`~specargs.use_kwargs` decorator functions.  On top of the
 functionality they provide in :doc:`webargs:index`, these decorators also attach metadata onto decorated view
-functions/methods that's used by an instance of :class:`~apispec_webargs.WebargsAPISpec` to generate parameter metadata
+functions/methods that's used by an instance of :class:`~specargs.WebargsAPISpec` to generate parameter metadata
 in the resulting OpenAPI specification. These decorators can be used as shown below::
 
     from flask import Flask
-    from apispec_webargs import use_args
+    from specargs import use_args
     from webargs import fields
 
     app = Flask(__name__, static_folder=None)
@@ -130,7 +130,7 @@ in the resulting OpenAPI specification. These decorators can be used as shown be
             print(args.get("age"))
             ...
 
-:func:`apispec_webargs.use_kwargs` is used the same way, but will pass in keyword arguments instead of a single
+:func:`specargs.use_kwargs` is used the same way, but will pass in keyword arguments instead of a single
 positional argument::
 
     @app.post("/users")
@@ -164,7 +164,7 @@ The above code snippets will all result in the same OpenAPI structure:
 Adding Parameter Metadata to Operations
 ---------------------------------------
 
-The same :meth:`apispec_webargs.use_args` and :meth:`apispec_webargs.use_kwargs` methods can be used to provide metadata
+The same :meth:`specargs.use_args` and :meth:`specargs.use_kwargs` methods can be used to provide metadata
 for parameters not accepted in the request body. For example::
 
     @app.get("/users")
@@ -190,13 +190,13 @@ The above code snippet will result in this OpenAPI structure:
 Adding Response Metadata/Serialization
 --------------------------------------
 
-Building on :func:`~apispec_webargs.use_args` and :func:`~apispec_webargs.use_kwargs`, **apispec-webargs** provides
-another decorator function :func:`~apispec_webargs.use_response`. This function is also used as view function/method
+Building on :func:`~specargs.use_args` and :func:`~specargs.use_kwargs`, **specargs** provides
+another decorator function :func:`~specargs.use_response`. This function is also used as view function/method
 decorator.
 
 Generating an OAS File
 ----------------------
 
-Once all components have been added to a :class:`~apispec_webargs.WebargsAPISpec` instance, an OAS definition can be
-output using the :meth:`~apispec_webargs.WebargsAPISpec.to_dict` and :meth:`~apispec_webargs.WebargsAPISpec.to_yaml`
+Once all components have been added to a :class:`~specargs.WebargsAPISpec` instance, an OAS definition can be
+output using the :meth:`~specargs.WebargsAPISpec.to_dict` and :meth:`~specargs.WebargsAPISpec.to_yaml`
 methods, exactly as with :class:`apispec.APISpec`.
