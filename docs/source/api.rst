@@ -62,10 +62,3 @@ Exceptions
 .. automodule:: specargs.in_poly
    :members:
    :exclude-members: InPoly, OneOf, AnyOf, AllOf
-
-.. .. automodule:: specargs
-..    :members:
-..    :imported-members:
-..    :exclude-members: WebargsPlugin, WebargsAPISpec, Response
-..    :show-inheritance:
-..    :special-members:

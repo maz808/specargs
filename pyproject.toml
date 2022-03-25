@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "specargs"
 version = "0.1.0"
-description = ""
+description = "A library for request and response parsing and serialization and OpenAPI Specification file generation"
 authors = ["maz808 <mzamora808@gmail.com>"]
 
 [tool.poetry.dependencies]
@@ -27,6 +27,7 @@ django = ["Django"]
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 pytest-mock = "^3.7.0"
+rstcheck = "^3.3.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
