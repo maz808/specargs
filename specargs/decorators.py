@@ -48,6 +48,11 @@ class DuplicateResponseCodeError(Exception):
     pass
 
 
+class MultipleSuccessCodeError(Exception):
+    '''An exception that's raised when more than one success (2XX) status code is registered to a view function/method'''
+    pass
+
+
 def _dump_response(obj: Any, response: Response):
     schema = response.schema
     is_list_tuple_or_set = any(isinstance(obj, type_) for type_ in (list, tuple, set))
@@ -59,7 +64,7 @@ def _dump_response(obj: Any, response: Response):
 def use_response(
     response_or_argpoly: Optional[Union[Response, Union[ArgMap, InPoly]]],
     *,
-    status_code: HTTPStatus = HTTPStatus.OK,
+    status_code: Union[HTTPStatus, int] = HTTPStatus.OK,
     description: str = "",
     **headers: str
 ) -> Callable[..., Callable]:
@@ -80,15 +85,27 @@ def use_response(
     Raises:
         :exc:`DuplicateResponseCodeError`: If a status code is registered to the same view function/method more than
             once
+        :exc:`MultipleSuccessCodeError`: If multiple success status codes (2XX) are registered to a view
+            function/method
     '''
+    if isinstance(status_code, int): status_code = HTTPStatus(status_code)
     response = ensure_response(response_or_argpoly, description=description, headers=headers)
 
     def decorator(func):
         func.responses = getattr(func, "responses", {})
         if status_code in func.responses:
-            raise DuplicateResponseCodeError(f"\nStatus code '{status_code}' is already registered to '{func.__qualname__}'!")
+            raise DuplicateResponseCodeError(
+                f"\nStatus code '{status_code}' is already registered to '{func.__qualname__}'!"
+            )
 
         func.responses[status_code] = response
+
+        if not str(status_code.value).startswith("2"): return func
+
+        if getattr(func, "wrapped_by_2XX", False):
+            raise MultipleSuccessCodeError(f"\nMultiple success status codes (2XX) registered to '{func.__qualname__}'")
+
+        func.wrapped_by_2XX = True
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):

@@ -37,4 +37,4 @@ class ExamplesView(MethodView):
 
 examples_blueprint = Blueprint("examples-api", __name__, url_prefix="/examples")
 examples_blueprint.add_url_rule("", view_func=ExamplesView.as_view("examples"))
-examples_blueprint.add_url_rule("/<int(min=1, max=2):id>", view_func=ExampleView.as_view("example"))
+examples_blueprint.add_url_rule("/<int(min=1, max=10):id>", view_func=ExampleView.as_view("example"))

@@ -1,11 +1,13 @@
+from http import HTTPStatus
 from typing import Optional
 
 from attrs import define
+from flask import abort
 from flask.views import MethodView
 from marshmallow import Schema
 from webargs import fields
 
-from specargs import use_response, use_kwargs, AnyOf
+from specargs import use_response, use_kwargs, AnyOf, use_empty_response
 
 from ..spec import spec
 
@@ -48,5 +50,8 @@ class AnotherOneSchema(Schema):
 class ExampleView(MethodView):
     @use_kwargs({"name": fields.Str()}, location = "query")
     @use_response(AnyOf(ExampleSchema, OtherSchema))
+    @use_empty_response(status_code=HTTPStatus.NOT_FOUND, description="The example with the given id was not found")
     def get(self, id, **kwargs):
+        if id == 8:
+            abort(404)
         return Example(id=id, name=kwargs.get("name") or "example")
