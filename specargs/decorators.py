@@ -5,9 +5,9 @@ from typing import Any, Callable, Optional, Union
 from marshmallow import Schema
 from webargs import fields
 
-from .common import ArgMap, Webargs, parser
+from .common import ArgMap, Webargs, parser, Response
 from .in_poly import InPoly
-from .oas import Response, ensure_response
+from .oas import ensure_response
 
 
 def use_args(argpoly: Union[ArgMap, InPoly], *args, location: str = parser.DEFAULT_LOCATION, **kwargs) -> Callable[..., Callable]:
@@ -48,8 +48,16 @@ class DuplicateResponseCodeError(Exception):
     pass
 
 
-def _dump_response(obj: Any, response: Response):
-    schema = response.schema
+class UnregisteredResponseCodeError(Exception):
+    '''An exception that's raised when a view function/method returns an unregistered status code
+
+    The status code of a :class:`~specargs.Response` returned by a view function/method must be registered to the view
+    function/method using :func:`~specargs.use_response` or :func:`~specargs.use_empty_response`.
+    '''
+    pass
+
+
+def _dump_response_schema(obj: Any, schema: Optional[Union[Schema, InPoly, fields.Field]]):
     is_list_tuple_or_set = any(isinstance(obj, type_) for type_ in (list, tuple, set))
     if isinstance(schema, Schema) or isinstance(schema, InPoly): return schema.dump(obj, many=is_list_tuple_or_set)
     if isinstance(schema, fields.Field): return schema.serialize("unused", obj, lambda o, *_: o)
@@ -59,43 +67,64 @@ def _dump_response(obj: Any, response: Response):
 def use_response(
     response_or_argpoly: Optional[Union[Response, Union[ArgMap, InPoly]]],
     *,
-    status_code: HTTPStatus = HTTPStatus.OK,
+    status_code: Union[HTTPStatus, int] = HTTPStatus.OK,
     description: str = "",
     **headers: str
 ) -> Callable[..., Callable]:
     '''A decorator function used for registering a response to a view function/method
 
     Args:
-        response_or_argpoly: A :class:`~oas.Response` object, an :class:`~in_poly.InPoly` object, a marshmallow `Schema`
-            class or instance, a dictionary of names to marshmallow `Field` objects, or `None`. Determines the content
-            of the corresponding `response` clause in the generated OpenAPI spec and whether/how the data returned by
-            the decorated view function/method is serialized
+        response_or_argpoly: A :class:`~oas.Response` object, an :class:`~in_poly.InPoly` object, a
+            :class:`marshmallow.Schema` class or instance, a dictionary of names to :mod:`marshmallow.fields`, or
+            `None`. Determines the content of the corresponding `response` clause in the generated OpenAPI spec and
+            whether/how the data returned by the decorated view function/method is serialized
         status_code: The status code under which the response is being listed in the generated OpenAPI spec. Also used
             as the status code for the decorated view function/method response. Defaults to `http.HTTPStatus.OK`
-        description: The response description. Defaults to an empty string. Ignored if `response_or_argpoly` is a
-            :class:`~Response` object
+        description: The response description. Defaults to an empty string. Ignored if `response_or_argpoly` is an
+            :class:`oas.Response` object
         **headers: Any keyword arguments not listed above are taken as response header names and values. Ignored if
-            `response_or_argpoly` is a :class:`~Response` object
+            `response_or_argpoly` is an :class:`oas.Response` object
 
     Raises:
         :exc:`DuplicateResponseCodeError`: If a status code is registered to the same view function/method more than
             once
+        :exc:`UnregisteredResponseCodeError`: If the status code of a :class:`~specargs.Response` returned by a view
+            function/method has not be registered to the view function/method
     '''
+    if isinstance(status_code, int): status_code = HTTPStatus(status_code)
     response = ensure_response(response_or_argpoly, description=description, headers=headers)
 
     def decorator(func):
         func.responses = getattr(func, "responses", {})
         if status_code in func.responses:
-            raise DuplicateResponseCodeError(f"\nStatus code '{status_code}' is already registered to '{func.__qualname__}'!")
+            raise DuplicateResponseCodeError(
+                f"\nStatus code '{status_code}' is already registered to '{func.__qualname__}'!"
+            )
 
         func.responses[status_code] = response
 
+        is_resp_wrapper = "is_resp_wrapper"
+        if getattr(func, is_resp_wrapper, False): func = func.__wrapped__
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            data = func(*args, **kwargs)
+            view_data = func(*args, **kwargs)
+            if isinstance(view_data, Response):
+                response_code = view_data.status_code
+                view_data = view_data.data
+            else:
+                response_code = status_code
             # TODO: Determine return value based on framework (e.g. Flask's make_response vs Django's HttpResponse)
-            return (_dump_response(data, response), status_code)
+            try:
+                schema = func.responses[response_code].schema
+            except KeyError:
+                raise UnregisteredResponseCodeError(
+                    f"Status code '{response_code}' has not been registered to '{func.__qualname__}'!"
+                )
 
+            return (_dump_response_schema(view_data, schema), response_code)
+
+        setattr(wrapper, is_resp_wrapper, True)
         return wrapper
 
     return decorator

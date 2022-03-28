@@ -47,16 +47,24 @@ Schema Inheritance/Polymorphism
    :show-inheritance:
    :special-members:
 
-Reusable Components
--------------------
+Response Creation
+-----------------
 
 .. autoclass:: specargs.Response
+
+Reusable OAS Components
+-----------------------
+
+.. autoclass:: specargs.oas.Response
    :members:
 
 Exceptions
 ----------
 
 .. autoexception:: specargs.decorators.DuplicateResponseCodeError
+   :special-members:
+
+.. autoexception:: specargs.decorators.UnregisteredResponseCodeError
    :special-members:
 
 .. automodule:: specargs.in_poly

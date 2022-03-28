@@ -27,8 +27,11 @@ def ensure_field_schema_or_inpoly(
 class Response:
     '''Stores metadata representing a reusable OpenAPI specification response object
 
+    This class should only be instantiated using the :meth:`~specargs.WebargsAPISpec.response` method of the
+    :class:`~specargs.WebargsAPISpec` class.
+
     The :attr:`schema` attribute of this class is also used for data serialization when provided to
-    :func:`specargs.use_response`
+    :func:`specargs.use_response`.
     '''
     #: A :class:`marshmallow.Schema`, an :class:`~specargs.in_poly.InPoly` object, or a :class:`marshmallow.fields.Field`. Determines the :attr:`~Response.content` of the generated OpenAPI response object. Also determines serialization of response data when provided to :func:`specargs.use_response`
     schema: Optional[Union[Schema, InPoly, fields.Field]] = field(

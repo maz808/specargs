@@ -1,9 +1,10 @@
-from enum import Enum, auto
+from enum import Enum
+from http import HTTPStatus
 import os
-from typing import Dict, Union, TYPE_CHECKING, Type
+from typing import Any, Dict, Union, TYPE_CHECKING, Type
 import sys
 
-from attrs import field, frozen
+from attrs import define, field, frozen
 from cattrs import GenConverter
 from marshmallow import Schema, fields
 import webargs.core
@@ -82,3 +83,21 @@ def ensure_schema_or_inpoly(argpoly: Union[ArgMap, InPoly]) -> Union[Schema, InP
     if isinstance(argpoly, dict): return parser.schema_class.from_dict(argpoly)()
     if isinstance(argpoly, type(Schema)): return argpoly()
     raise TypeError(f"Unable to produce Schema or InPoly from {argpoly}!")
+
+
+
+@define
+class Response:
+    '''An object used for specifying the data and status code returned by a view function/method'''
+    data: Any
+    status_code: HTTPStatus = field(converter=HTTPStatus, default=HTTPStatus.OK)
+
+    def __init__(self, data: Any, status_code: Union[HTTPStatus, int]):
+        '''Initializes a :class:`~specargs.Response` object
+        
+        Args:
+            data: The data to be returned in the response. May be serialized depending on whether/how the returning
+                view function/method has been decorated with :func:`~specargs.use_response`
+            status_code: The status code of the response
+        '''
+        self.__attrs_init__(data, status_code)
