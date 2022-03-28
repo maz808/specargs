@@ -1,58 +1,17 @@
-from enum import Enum
 from http import HTTPStatus
-import os
 from typing import Any, Dict, Union, TYPE_CHECKING, Type
-import sys
 
 from attrs import define, field, frozen
 from cattrs import GenConverter
 from marshmallow import Schema, fields
-import webargs.core
+
+from .framework import parser
 
 if TYPE_CHECKING:
     from in_poly import InPoly
 else:
     InPoly = "InPoly"
 
-
-class Framework(Enum):
-    FLASK = "flask"
-    DJANGO = "django"
-    TORNADO = "tornado"
-    BOTTLE = "bottle"
-
-
-class MissingFrameworkError(Exception):
-    '''Raised when the project environment has not installed a supported framework'''
-    pass
-
-
-class MultipleFrameworkError(Exception):
-    '''Raised when the project environment has installed multiple supported frameworks'''
-    pass
-
-
-def _determine_framework():
-    active_framework = None
-    for framework in Framework:
-        if framework.value in sys.modules:
-            if active_framework:
-                raise MultipleFrameworkError("Multiple frameworks in the environment is not supported!")
-            active_framework = framework
-
-    if not active_framework:
-        raise MissingFrameworkError("A supported web framework (e.g. Flask, Django, etc.) must be installed!")
-
-    return active_framework
-
-
-FRAMEWORK = _determine_framework() if not os.environ.get("ASWA_DOCS", False) else None
-
-if not FRAMEWORK: parser = webargs.core.Parser()
-elif FRAMEWORK == Framework.FLASK: from webargs.flaskparser import parser
-elif FRAMEWORK == Framework.DJANGO: from webargs.djangoparser import parser
-elif FRAMEWORK == Framework.TORNADO: from webargs.tornadoparser import parser
-elif FRAMEWORK == Framework.BOTTLE: from webargs.bottleparser import parser
 
 ArgMap = Union[Schema, Dict[str, Union[fields.Field, Type[fields.Field]]], Type[Schema]]
 
@@ -83,7 +42,6 @@ def ensure_schema_or_inpoly(argpoly: Union[ArgMap, InPoly]) -> Union[Schema, InP
     if isinstance(argpoly, dict): return parser.schema_class.from_dict(argpoly)()
     if isinstance(argpoly, type(Schema)): return argpoly()
     raise TypeError(f"Unable to produce Schema or InPoly from {argpoly}!")
-
 
 
 @define

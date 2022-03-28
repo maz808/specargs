@@ -1,6 +1,6 @@
 from apispec_webframeworks.tornado import TornadoPlugin
 
-from .webargs_plugin import WebargsPlugin
+from ..plugin import WebargsPlugin
 
 
 class TornadoWebargsPlugin(WebargsPlugin, TornadoPlugin):

@@ -1,15 +1,20 @@
 from abc import ABC
 import math
-from typing import Dict, Union, List
+from typing import Dict, Union, List, TYPE_CHECKING
 
 from apispec.ext.marshmallow import MarshmallowPlugin, SchemaResolver
 from marshmallow import Schema
 from webargs import fields
 
-from ..common import con, Webargs
-from ..oas import Response
-from ..in_poly import InPoly
-from ..validate import MultipleOf
+from .common import con, Webargs
+from .validate import MultipleOf
+
+if TYPE_CHECKING:
+    from .oas import Response
+    from .in_poly import InPoly
+else:
+    Response = "Response"
+    InPoly = "InPoly"
 
 
 def field2multipleOf(_, field, **kwargs):
@@ -76,6 +81,7 @@ class WebargsPlugin(MarshmallowPlugin, ABC):
         return super().response_helper(con.unstructure(response))
 
     def _content_from_schema_or_inpoly(self, schema_or_inpoly: Union[Schema, InPoly]) -> dict:
+        from .in_poly import InPoly
         if isinstance(schema_or_inpoly, InPoly): schema_or_inpoly = con.unstructure(schema_or_inpoly)
         return {
             "content": {

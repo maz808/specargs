@@ -1,4 +1,17 @@
-from .webargs_plugin import WebargsPlugin
+# TODO: Add support for Django
+import json
+
+from django.http import HttpRequest
+
+from ..plugin import WebargsPlugin
+
+
+def get_request_body(request: HttpRequest):
+    return json.loads(request.body)
+
+
+def create_paths(self, framework_obj):
+    raise NotImplementedError("Django is currently not supported!")
 
 
 class DjangoWebargsPlugin(WebargsPlugin):

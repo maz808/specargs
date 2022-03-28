@@ -5,24 +5,8 @@ from typing import Any, ClassVar, Tuple
 from attrs import define, field
 from marshmallow import Schema, EXCLUDE, ValidationError
 
-from .common import ensure_schema_or_inpoly, con, ArgMap, FRAMEWORK, Framework
-
-
-if FRAMEWORK == Framework.FLASK:
-    from flask import Request
-    def _get_request_body(request: Request):
-        return request.json
-if FRAMEWORK == Framework.DJANGO:
-    # TODO: Add support for Django
-    from django.http import HttpRequest
-    def _get_request_body(request: HttpRequest):
-        return json.loads(request.body)
-if FRAMEWORK == Framework.TORNADO:
-    # TODO: Add support for Tornado
-    pass
-if FRAMEWORK == Framework.BOTTLE:
-    # TODO: Add support for Bottle
-    pass
+from .common import ensure_schema_or_inpoly, con, ArgMap
+from .framework import get_request_body
 
 
 @define
@@ -140,7 +124,7 @@ class OneOf(InPoly):
             :exc:`OneOfValidationError`: If none of :attr:`OneOf.schemas` succesfully validate the request data
         '''
         # TODO: Determine Request type based on framework
-        valid_schemas = tuple(schema for schema in self.schemas if len(schema.validate(_get_request_body(request))) == 0)
+        valid_schemas = tuple(schema for schema in self.schemas if len(schema.validate(get_request_body(request))) == 0)
         if len(valid_schemas) > 1:
             raise OneOfConflictError(
                 f"Request data is valid for multiple Schemas in "
@@ -236,7 +220,7 @@ class AnyOf(InPoly):
         '''
         valid_schema_loads = {}
         for schema in self.schemas:
-            try: load = schema.load(_get_request_body(request), unknown=EXCLUDE)
+            try: load = schema.load(get_request_body(request), unknown=EXCLUDE)
             except ValidationError: continue
             valid_schema_loads[schema] = load
 
@@ -341,7 +325,7 @@ class AllOf(InPoly):
             :exc:`AllOfValidationError`: If any of :attr:`AllOf.schemas` don't succesfully validate the request data
         '''
         try:
-            schema_loads = {schema: schema.load(_get_request_body(request), unknown=EXCLUDE) for schema in self.schemas}
+            schema_loads = {schema: schema.load(get_request_body(request), unknown=EXCLUDE) for schema in self.schemas}
         except ValidationError as e:
             raise AllOfValidationError(
                 f"Request data is invalid for a Schema in "

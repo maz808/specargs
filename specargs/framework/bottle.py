@@ -1,6 +1,6 @@
 from apispec_webframeworks.bottle import BottlePlugin
 
-from .webargs_plugin import WebargsPlugin
+from ..plugin import WebargsPlugin
 
 
 class BottleWebargsPlugin(WebargsPlugin, BottlePlugin):

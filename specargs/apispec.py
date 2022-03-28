@@ -6,19 +6,12 @@ from apispec import APISpec
 from marshmallow import Schema
 from webargs.core import ArgMap
 
-from .common import FRAMEWORK, Framework
+from .framework import create_paths
 from .in_poly import InPoly
 from .oas import Response, ensure_response
 
-if FRAMEWORK == Framework.FLASK:
-    from flask import Flask
 
-if FRAMEWORK == Framework.DJANGO:
-    # TODO: Import relevant Django types
-    pass
-
-
-class WebargsAPISpec(APISpec, ABC):
+class WebargsAPISpec(APISpec):
     '''Stores metadata that describes a RESTful API and generates an OpenAPI spec from that metadata
 
     This class adds functionality to :class:`apispec.APISpec` that allows for definition of reusable OpenAPI response
@@ -41,17 +34,17 @@ class WebargsAPISpec(APISpec, ABC):
         description: str = "",
         **headers: str
     ) -> Response:
-        '''Registers a resuable OpenAPI response object and returns it for easy reuse
+        '''Registers a resuable OAS response object and returns it as an :class:`oas.Response` easy reuse
 
         Args:
             response_id: The name of the response as it will appear in the OpenAPI spec
-            response_or_argpoly: A :class:`~oas.Response` object, an :class:`~in_poly.InPoly` object, a marshmallow
+            response_or_argpoly: A :class:`oas.Response` object, an :class:`~in_poly.InPoly` object, a marshmallow
                 `Schema` class or instance, a dictionary of names to marshmallow `Field` objects, or `None`. Determines
                 the content of the generated OpenAPI response object
             description: The description of the generated OpenAPI response object. Ignored if `response_or_argpoly` is
                 a :class:`~oas.Response` object
             **headers: Any keyword arguments not listed above are taken as response header names and values. Ignored if
-                if `response_or_argpoly` is a :class:`~oas.Response` object
+                if `response_or_argpoly` is a :class:`oas.Response` object
 
         Returns:
             The value of `response_or_argpoly` if a :class:`~oas.Response` object was provided. Otherwise, a new
@@ -130,41 +123,4 @@ class WebargsAPISpec(APISpec, ABC):
         The list of supported frameworks and accepted objects is as follows:
 
         - Flask: :class:`flask.Flask`'''
-        ...
-
-
-class _FlaskWebargsAPISpec(WebargsAPISpec):
-    def create_paths(self, framework_obj: Any):
-        if not isinstance(framework_obj, Flask):
-            raise TypeError("The provided object is not of type `flask.Flask`!")
-
-        for view_func in framework_obj.view_functions.values():
-            self.path(view=view_func, app=framework_obj)
-
-
-# TODO: Add support for Django projects
-class _DjangoWebargsAPISpec(WebargsAPISpec):
-    def create_paths(self, framework_obj: Any):
-        raise NotImplementedError("Django is currently not supported!")
-
-
-# TODO: Add support for Tornado projects
-class _TornadoWebargsAPISpec(WebargsAPISpec):
-    def create_paths(self, framework_obj: Any):
-        raise NotImplementedError("Tornado is currently not supported!")
-
-
-# TODO: Add support for Bottle projects
-class _BottleWebargsAPISpec(WebargsAPISpec):
-    def create_paths(self, framework_obj: Any):
-        raise NotImplementedError("Bottle is currently not supported!")
-
-
-_implementations = {
-    Framework.FLASK: _FlaskWebargsAPISpec,
-    Framework.DJANGO: _DjangoWebargsAPISpec,
-    Framework.TORNADO: _TornadoWebargsAPISpec,
-}
-
-if not os.environ.get("ASWA_DOCS", False):
-    WebargsAPISpec = _implementations[FRAMEWORK]
+        create_paths(self, framework_obj)

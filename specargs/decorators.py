@@ -5,7 +5,8 @@ from typing import Any, Callable, Optional, Union
 from marshmallow import Schema
 from webargs import fields
 
-from .common import ArgMap, Webargs, parser, Response
+from .common import ArgMap, Webargs, Response
+from .framework import parser
 from .in_poly import InPoly
 from .oas import ensure_response
 

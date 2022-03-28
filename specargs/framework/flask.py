@@ -1,9 +1,21 @@
 from typing import Dict, List, Union
 from apispec_webframeworks.flask import FlaskPlugin
 from werkzeug import routing
+
+from flask import Request, Flask
 from flask.views import MethodView
 
-from .webargs_plugin import WebargsPlugin
+from ..plugin import WebargsPlugin
+
+def get_request_body(request: Request):
+    return request.json
+
+def create_paths(self, framework_obj: Flask):
+    if not isinstance(framework_obj, Flask):
+        raise TypeError("The provided object is not of type `flask.Flask`!")
+
+    for view_func in framework_obj.view_functions.values():
+        self.path(view=view_func, app=framework_obj)
 
 
 def _schema_data_from_converter(converter: routing.BaseConverter) -> Dict[str, Union[str, int, List[str]]]:

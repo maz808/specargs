@@ -4,4 +4,4 @@ from .apispec import WebargsAPISpec
 from .decorators import use_args, use_kwargs, use_response, use_empty_response
 from .in_poly import OneOf, AnyOf, AllOf
 from .common import Response
-from .plugin import WebargsPlugin
+from .framework import WebargsPlugin
