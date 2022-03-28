@@ -9,8 +9,10 @@ from flask.views import MethodView
 
 from ..plugin import WebargsPlugin
 
+
 def get_request_body(request: Request):
     return request.json
+
 
 def create_paths(self, framework_obj: Flask):
     if not isinstance(framework_obj, Flask):
@@ -18,6 +20,10 @@ def create_paths(self, framework_obj: Flask):
 
     for view_func in framework_obj.view_functions.values():
         self.path(view=view_func, app=framework_obj)
+
+
+def make_response(data, status_code):
+    return data, status_code
 
 
 def _schema_data_from_converter(converter: routing.BaseConverter) -> Dict[str, Union[str, int, List[str]]]:

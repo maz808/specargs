@@ -12,6 +12,10 @@ def create_paths(self, framework_obj):
     raise NotImplementedError("Bottle is not currently supported")
 
 
+def make_response(data, status_code):
+    raise NotImplementedError("Bottle is not currently supported")
+
+
 class BottleWebargsPlugin(WebargsPlugin, BottlePlugin):
     def __init__(self):
         raise NotImplementedError("Bottle is not currently supported")

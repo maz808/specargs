@@ -44,10 +44,10 @@ if not FRAMEWORK:
     get_request_body = create_paths = lambda: None
     from ..plugin import WebargsPlugin
 elif FRAMEWORK == Framework.FLASK:
-    from .flask import get_request_body, create_paths, WebargsPlugin, parser
+    from .flask import make_response, get_request_body, create_paths, WebargsPlugin, parser
 elif FRAMEWORK == Framework.DJANGO:
-    from .django import get_request_body, create_paths, WebargsPlugin, parser
+    from .django import make_response, get_request_body, create_paths, WebargsPlugin, parser
 elif FRAMEWORK == Framework.TORNADO:
-    from .tornado import get_request_body, create_paths, WebargsPlugin, parser
+    from .tornado import make_response, get_request_body, create_paths, WebargsPlugin, parser
 elif FRAMEWORK == Framework.BOTTLE:
-    from .bottle import get_request_body, create_paths, WebargsPlugin, parser
+    from .bottle import make_response, get_request_body, create_paths, WebargsPlugin, parser

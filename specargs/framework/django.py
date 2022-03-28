@@ -15,6 +15,10 @@ def create_paths(self, framework_obj):
     raise NotImplementedError("Django is currently not supported!")
 
 
+def make_response(data, status_code):
+    raise NotImplementedError("Django is currently not supported!")
+
+
 class DjangoWebargsPlugin(WebargsPlugin):
     def __init__(self):
         raise NotImplementedError("Django is not currently supported")

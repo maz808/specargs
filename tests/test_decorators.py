@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from http import HTTPStatus
 
 from marshmallow import Schema
 import pytest
@@ -102,12 +103,13 @@ def test_use_response(ensure_response: MagicMock, with_status_code: bool, with_d
     response_or_argpoly = "response_or_argpoly"
     headers = {"first": "first header", "second": "second header", "third": "third header"}
     func = MagicMock()
+    del func.is_resp_wrapper
     del func.responses
     args = ("these", "don't", "matter")
     kwargs = {"also": "really", "don't": "matter"}
     response: MagicMock = ensure_response.return_value
     use_response_kwargs = {}
-    if with_status_code: use_response_kwargs["status_code"] = 418
+    if with_status_code: use_response_kwargs["status_code"] = 404
     if with_description: use_response_kwargs["description"] = "a description"
     expected_status_code = use_response_kwargs.get("status_code", 200)
 

@@ -1,12 +1,12 @@
 import functools
 from http import HTTPStatus
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union, Tuple
 
 from marshmallow import Schema
 from webargs import fields
 
 from .common import ArgMap, Webargs, Response
-from .framework import parser
+from .framework import parser, make_response
 from .in_poly import InPoly
 from .oas import ensure_response
 
@@ -56,6 +56,12 @@ class UnregisteredResponseCodeError(Exception):
     function/method using :func:`~specargs.use_response` or :func:`~specargs.use_empty_response`.
     '''
     pass
+
+
+def _get_response_data_and_status(data: Any, default_status: HTTPStatus) -> Tuple[Any, HTTPStatus]:
+    if isinstance(data, Response):
+        return data.data, data.status_code
+    return data, default_status
 
 
 def _dump_response_schema(obj: Any, schema: Optional[Union[Schema, InPoly, fields.Field]]):
@@ -110,20 +116,16 @@ def use_response(
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             view_data = func(*args, **kwargs)
-            if isinstance(view_data, Response):
-                response_code = view_data.status_code
-                view_data = view_data.data
-            else:
-                response_code = status_code
-            # TODO: Determine return value based on framework (e.g. Flask's make_response vs Django's HttpResponse)
+            response_data, response_status = _get_response_data_and_status(view_data, status_code)
+
             try:
-                schema = func.responses[response_code].schema
+                schema = func.responses[response_status].schema
             except KeyError:
                 raise UnregisteredResponseCodeError(
-                    f"Status code '{response_code}' has not been registered to '{func.__qualname__}'!"
+                    f"Status code '{response_status}' has not been registered to '{func.__qualname__}'!"
                 )
 
-            return (_dump_response_schema(view_data, schema), response_code)
+            return make_response(_dump_response_schema(response_data, schema), response_status)
 
         setattr(wrapper, is_resp_wrapper, True)
         return wrapper

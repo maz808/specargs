@@ -12,6 +12,10 @@ def create_paths(self, framework_obj):
     raise NotImplementedError("Tornado is not currently supported")
 
 
+def make_response(data, status_code):
+    raise NotImplementedError("Tornado is not currently supported")
+
+
 class TornadoWebargsPlugin(WebargsPlugin, TornadoPlugin):
     def __init__(self):
         raise NotImplementedError("Tornado is not currently supported")
