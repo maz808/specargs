@@ -1,6 +1,8 @@
 from typing import Dict, List, Union
+
 from apispec_webframeworks.flask import FlaskPlugin
 from werkzeug import routing
+from webargs.flaskparser import parser
 
 from flask import Request, Flask
 from flask.views import MethodView
@@ -87,3 +89,6 @@ class FlaskWebargsPlugin(WebargsPlugin, FlaskPlugin):
                 if method not in {"GET", "POST", "PUT", "PATCH", "DELETE"}: continue
                 method_name = method.lower()
                 self._update_operations(operations, view=view, method_name=method_name)
+
+
+WebargsPlugin = FlaskWebargsPlugin

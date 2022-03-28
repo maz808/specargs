@@ -5,7 +5,6 @@ from attrs import define, field, frozen
 from cattrs import GenConverter
 from marshmallow import Schema, fields
 
-from .framework import parser
 
 if TYPE_CHECKING:
     from in_poly import InPoly
@@ -38,6 +37,7 @@ def ensure_schema_or_inpoly(argpoly: Union[ArgMap, InPoly]) -> Union[Schema, InP
         :exc:`TypeError`: If given an object from which a `Schema` or :class:`InPoly` instance cannot be produced
     '''
     from .in_poly import InPoly
+    from .framework import parser
     if isinstance(argpoly, Schema) or isinstance(argpoly, InPoly): return argpoly
     if isinstance(argpoly, dict): return parser.schema_class.from_dict(argpoly)()
     if isinstance(argpoly, type(Schema)): return argpoly()

@@ -1,6 +1,6 @@
 from enum import Enum
 import os
-import sys
+import pkgutil
 
 import webargs
 
@@ -21,12 +21,15 @@ class MultipleFrameworkError(Exception):
     pass
 
 
+INSTALLED_MODULES = {module.name for module in pkgutil.iter_modules()}
+
+
 def _determine_framework():
     active_framework = None
     for framework in Framework:
-        if framework.value in sys.modules:
+        if framework.value in INSTALLED_MODULES:
             if active_framework:
-                raise MultipleFrameworkError("Multiple frameworks in the environment is not supported!")
+                raise MultipleFrameworkError("Multiple frameworks in the environment is not currently supported!")
             active_framework = framework
 
     if not active_framework:
@@ -36,20 +39,15 @@ def _determine_framework():
 
 
 FRAMEWORK = _determine_framework() if not os.environ.get("ASWA_DOCS", False) else None
-
 if not FRAMEWORK:
     parser = webargs.core.Parser()
     get_request_body = create_paths = lambda: None
     from ..plugin import WebargsPlugin
 elif FRAMEWORK == Framework.FLASK:
-    from webargs.flaskparser import parser
-    from .flask import get_request_body, create_paths, FlaskWebargsPlugin as WebargsPlugin
+    from .flask import get_request_body, create_paths, WebargsPlugin, parser
 elif FRAMEWORK == Framework.DJANGO:
-    from webargs.djangoparser import parser
-    from .django import get_request_body, create_paths, DjangoWebargsPlugin as WebargsPlugin
+    from .django import get_request_body, create_paths, WebargsPlugin, parser
 elif FRAMEWORK == Framework.TORNADO:
-    from webargs.tornadoparser import parser
-    from .tornado import TornadoWebargsPlugin as WebargsPlugin
+    from .tornado import get_request_body, create_paths, WebargsPlugin, parser
 elif FRAMEWORK == Framework.BOTTLE:
-    from webargs.bottleparser import parser
-    from .bottle import BottleWebargsPlugin as WebargsPlugin
+    from .bottle import get_request_body, create_paths, WebargsPlugin, parser

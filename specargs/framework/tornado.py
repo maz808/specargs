@@ -1,6 +1,15 @@
 from apispec_webframeworks.tornado import TornadoPlugin
+from webargs.tornadoparser import parser
 
 from ..plugin import WebargsPlugin
+
+
+def get_request_body(request):
+    raise NotImplementedError("Tornado is not currently supported")
+
+
+def create_paths(self, framework_obj):
+    raise NotImplementedError("Tornado is not currently supported")
 
 
 class TornadoWebargsPlugin(WebargsPlugin, TornadoPlugin):
@@ -12,3 +21,6 @@ class TornadoWebargsPlugin(WebargsPlugin, TornadoPlugin):
 
     def operation_helper(self, operations, *, view, **kwargs):
         raise NotImplementedError("Tornado is not currently supported")
+
+
+WebargsPlugin = TornadoWebargsPlugin

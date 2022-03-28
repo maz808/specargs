@@ -2,6 +2,7 @@
 import json
 
 from django.http import HttpRequest
+from webargs.djangoparser import parser
 
 from ..plugin import WebargsPlugin
 
@@ -23,3 +24,6 @@ class DjangoWebargsPlugin(WebargsPlugin):
 
     def operation_helper(self, operations, *, view, **kwargs):
         raise NotImplementedError("Django is not currently supported")
+
+
+WebargsPlugin = DjangoWebargsPlugin

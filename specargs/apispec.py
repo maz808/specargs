@@ -6,7 +6,6 @@ from apispec import APISpec
 from marshmallow import Schema
 from webargs.core import ArgMap
 
-from .framework import create_paths
 from .in_poly import InPoly
 from .oas import Response, ensure_response
 
@@ -123,4 +122,5 @@ class WebargsAPISpec(APISpec):
         The list of supported frameworks and accepted objects is as follows:
 
         - Flask: :class:`flask.Flask`'''
+        from .framework import create_paths
         create_paths(self, framework_obj)
