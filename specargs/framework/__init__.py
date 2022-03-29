@@ -41,7 +41,9 @@ def _determine_framework():
 FRAMEWORK = _determine_framework() if not os.environ.get("ASWA_DOCS", False) else None
 if not FRAMEWORK:
     parser = webargs.core.Parser()
-    get_request_body = create_paths = lambda: None
+    make_response = lambda: None
+    get_request_body = make_response
+    create_paths = get_request_body
     from ..plugin import WebargsPlugin
 elif FRAMEWORK == Framework.FLASK:
     from .flask import make_response, get_request_body, create_paths, WebargsPlugin, parser
