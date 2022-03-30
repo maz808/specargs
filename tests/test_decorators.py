@@ -77,6 +77,13 @@ def ensure_response(mocker: MockerFixture):
     return mocker.patch.object(decorators, "ensure_response", autospec=True)
 
 
+@pytest.fixture
+def _get_response_data_and_status(mocker: MockerFixture):
+    mock = mocker.patch.object(decorators, "_get_response_data_and_status", autospec=True)
+    mock.return_value = ("response_data", "status_code")
+    return mock
+
+
 def test_use_response_duplicate_response_code(ensure_response: MagicMock):
     func = lambda: "WRAP ME!"
     status_code = 200
@@ -85,6 +92,30 @@ def test_use_response_duplicate_response_code(ensure_response: MagicMock):
     decorator = decorators.use_response("response_or_argpoly", status_code=status_code)
     with pytest.raises(decorators.DuplicateResponseCodeError):
         decorator(func)
+
+
+@pytest.mark.parametrize("already_wrapped", (
+    pytest.param(True, id="Previously wrapped"),
+    pytest.param(False, id="Not previously wrapped"),
+))
+def test_use_response_unregistered_status_code(
+    ensure_response: MagicMock,
+    make_response: MagicMock,
+    _get_response_data_and_status: MagicMock,
+    already_wrapped: bool
+):
+    func = lambda: "WRAP ME!"
+    status_code = 200
+    if already_wrapped:
+        func.is_resp_wrapper = True
+        func.__wrapped__ = lambda: "I'M WRAPPED!"
+        func.__wrapped__.responses = {}
+        func.responses = func.__wrapped__.responses
+
+    wrapped_func = decorators.use_response("response_or_argpoly", status_code=status_code)(func)
+
+    with pytest.raises(decorators.UnregisteredResponseCodeError):
+        wrapped_func()
 
 
 @pytest.mark.parametrize("status_code", (
@@ -100,7 +131,15 @@ def test_use_response_duplicate_response_code(ensure_response: MagicMock):
     pytest.param(True, id="Previously wrapped"),
     pytest.param(False, id="Not previously wrapped"),
 ))
-def test_use_response(mocker: MockerFixture, ensure_response: MagicMock, status_code: Optional[Union[HTTPStatus, int]], with_description: bool, already_wrapped: bool):
+def test_use_response(
+    mocker: MockerFixture,
+    ensure_response: MagicMock,
+    make_response: MagicMock,
+    _get_response_data_and_status: MagicMock,
+    status_code: Optional[Union[HTTPStatus, int]],
+    with_description: bool,
+    already_wrapped: bool,
+):
     response_or_argpoly = "response_or_argpoly"
     headers = {"first": "first header", "second": "second header", "third": "third header"}
     func = MagicMock()
@@ -119,11 +158,8 @@ def test_use_response(mocker: MockerFixture, ensure_response: MagicMock, status_
     if status_code: use_response_kwargs["status_code"] = status_code
     if with_description: use_response_kwargs["description"] = "a description"
     expected_status_code = HTTPStatus(use_response_kwargs.get("status_code", HTTPStatus.OK))
-    _get_response_data_and_status = mocker.patch.object(decorators, "_get_response_data_and_status")
-    response_data = "response_data"
-    _get_response_data_and_status.return_value = (response_data, expected_status_code)
+    response_data, response_status = _get_response_data_and_status.return_value
     _dump_response_schema = mocker.patch.object(decorators, "_dump_response_schema")
-    make_response = mocker.patch.object(decorators, "make_response")
 
     decorator = decorators.use_response(response_or_argpoly, **use_response_kwargs, **headers)
 
@@ -141,12 +177,14 @@ def test_use_response(mocker: MockerFixture, ensure_response: MagicMock, status_
     assert wrapped_func.is_resp_wrapper
     assert wrapped_func.responses[expected_status_code] == response
 
+    func.responses[response_status] = response
+
     output = wrapped_func(*args, **kwargs)
 
     func.assert_called_once_with(*args, **kwargs)
     _get_response_data_and_status.assert_called_once_with(func.return_value, expected_status_code)
     _dump_response_schema(response_data, response.schema)
-    make_response.assert_called_once_with(_dump_response_schema.return_value, expected_status_code)
+    make_response.assert_called_once_with(_dump_response_schema.return_value, response_status)
     assert output == make_response.return_value
 
 
