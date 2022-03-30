@@ -7,7 +7,7 @@ from marshmallow import Schema, fields
 
 
 if TYPE_CHECKING:
-    from in_poly import InPoly
+    from in_poly import InPoly  # pragma: no cover
 else:
     InPoly = "InPoly"
 
@@ -42,20 +42,3 @@ def ensure_schema_or_inpoly(argpoly: Union[ArgMap, InPoly]) -> Union[Schema, InP
     if isinstance(argpoly, dict): return parser.schema_class.from_dict(argpoly)()
     if isinstance(argpoly, type(Schema)): return argpoly()
     raise TypeError(f"Unable to produce Schema or InPoly from {argpoly}!")
-
-
-@define
-class Response:
-    '''An object used for specifying the data and status code returned by a view function/method'''
-    data: Any
-    status_code: HTTPStatus = field(converter=HTTPStatus, default=HTTPStatus.OK)
-
-    def __init__(self, data: Any, status_code: Union[HTTPStatus, int]):
-        '''Initializes a :class:`~specargs.Response` object
-        
-        Args:
-            data: The data to be returned in the response. May be serialized depending on whether/how the returning
-                view function/method has been decorated with :func:`~specargs.use_response`
-            status_code: The status code of the response
-        '''
-        self.__attrs_init__(data, status_code)

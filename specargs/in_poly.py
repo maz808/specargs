@@ -50,7 +50,7 @@ class InPoly(ABC):
     @abstractclassmethod
     def keyword(cls) -> str:
         '''The OpenAPI Spec keyword assigned to the class'''
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def dump(self, obj: Any, *, many: bool = False) -> dict:
@@ -58,11 +58,11 @@ class InPoly(ABC):
 
         This method mimics the behavior of the :meth:`marshmallow.Schema.dump` method
         '''
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def __call__(self, request: Any) -> Schema:
-        ...
+        ...  # pragma: no cover
 
 
 con.register_unstructure_hook(InPoly, lambda ip: {ip.keyword: ip.schemas})

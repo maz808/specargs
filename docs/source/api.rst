@@ -47,10 +47,11 @@ Schema Inheritance/Polymorphism
    :show-inheritance:
    :special-members:
 
-Response Creation
------------------
+Response Construction
+---------------------
 
 .. autoclass:: specargs.Response
+   :exclude-members: __new__
 
 Reusable OAS Components
 -----------------------
