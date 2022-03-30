@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 from http import HTTPStatus
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from marshmallow import Schema
 import pytest
@@ -70,6 +70,53 @@ def test_use_kwargs(mocker: MockerFixture):
 
     use_args.assert_called_once_with(*args, as_kwargs=True, **kwargs)
     assert decorator == use_args.return_value
+
+
+@pytest.mark.parametrize("data", (decorators.Response("data", 404), "data"))
+def test_get_response_data_and_status(data: Any):
+    default_status = HTTPStatus.CREATED
+    if isinstance(data, decorators.Response): expected_data, expected_status = data.data, data.status_code
+    else: expected_data, expected_status = data, default_status
+
+    resp_data, resp_status = decorators._get_response_data_and_status(data, default_status)
+
+    assert (resp_data, resp_status) == (expected_data, expected_status)
+
+
+@pytest.mark.parametrize("obj, many", (
+    pytest.param("obj", False, id="Not a list, tuple, or set"),
+    pytest.param([], True, id="List"),
+    pytest.param((), True, id="Tuple"),
+    pytest.param(set(), True, id="Set"),
+))
+@pytest.mark.parametrize("schema_type", (decorators.Schema, decorators.InPoly))
+def test_dump_response_schema_schema_or_inpoly(obj: Any, many: bool, schema_type: type):
+    schema = MagicMock(spec=schema_type)
+
+    result = decorators._dump_response_schema(obj, schema)
+
+    schema.dump.assert_called_once_with(obj, many=many)
+    assert result == schema.dump.return_value
+
+
+def test_dump_response_schema_field():
+    obj = "obj"
+    schema = MagicMock(spec=decorators.fields.Field)
+
+    result = decorators._dump_response_schema(obj, schema)
+
+    schema.serialize.assert_called_once()
+    assert schema.serialize.call_args.args[:2] == ("unused", obj)
+    assert result == schema.serialize.return_value
+
+
+def test_dump_response_schema_none():
+    obj = "obj"
+    schema = None
+
+    result = decorators._dump_response_schema(obj, schema)
+
+    assert result == ""
 
 
 @pytest.fixture
