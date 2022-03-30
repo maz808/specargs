@@ -6,7 +6,10 @@ from attrs import define, field
 
 @define
 class Response:
-    '''An object used for specifying the data and status code returned by a view function/method'''
+    '''An object used for specifying the data and status code returned by a view function/method
+    
+    This class should be used when returning a non-default status code from a view function/method.
+    '''
     data: Any
     status_code: HTTPStatus = field(converter=HTTPStatus, default=HTTPStatus.OK)
 
