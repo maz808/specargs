@@ -29,7 +29,9 @@ Initializing a Specification
 
 Generating a specification is accomplished similarly to apispec. A :class:`~specargs.WebargsAPISpec` must
 be instantiated and provided an instance of :class:`~specargs.WebargsPlugin` using the `plugins`
-keyword argument::
+keyword argument:
+
+.. code-block:: python
 
     from specargs import WebargsAPISpec, WebargsPlugin
 
@@ -54,7 +56,9 @@ Framework`).  The frameworks and accepted objects are as follows:
 
 - Flask: :class:`flask.Flask`
 
-For example, paths and operations can be generated from a Flask application like so::
+For example, paths and operations can be generated from a Flask application like so:
+
+.. code-block:: python
 
     from flask import Flask
     from specargs import WebargsAPISpec, WebargsPlugin
@@ -73,9 +77,11 @@ Adding Path Parameter Metadata
 
 When a `framework_obj` is passed to the :meth:`~specargs.WebargsAPISpec.create_paths`, view functions/methods and
 thier corresponding url routing rules are extracted. These url rules are then converted into path parameter metadata for
-the generated paths of the output OpenAPI specification. Using Flask, for example::
+the generated paths of the output OpenAPI specification. Using Flask, for example:
 
-    @app.get(/users/<int:user_id>/pets/<pet_name>)
+.. code-block:: python
+
+    @app.get("/users/<int:user_id>/pets/<pet_name>")
     def get_user_pet_by_name(user_id: int, pet_name: str):
         ...
 
@@ -106,7 +112,9 @@ As **specargs** is intended to provide a thin wrapper around :doc:`webargs:index
 :func:`~specargs.use_args` and :func:`~specargs.use_kwargs` decorator functions.  On top of the
 functionality they provide in :doc:`webargs:index`, these decorators also attach metadata onto decorated view
 functions/methods that's used by an instance of :class:`~specargs.WebargsAPISpec` to generate parameter metadata
-in the resulting OpenAPI specification. These decorators can be used as shown below::
+in the resulting OpenAPI specification. These decorators can be used as shown below:
+
+.. code-block:: python
 
     from flask import Flask
     from specargs import use_args
@@ -131,7 +139,9 @@ in the resulting OpenAPI specification. These decorators can be used as shown be
             ...
 
 :func:`specargs.use_kwargs` is used the same way, but will pass in keyword arguments instead of a single
-positional argument::
+positional argument:
+
+.. code-block:: python
 
     @app.post("/users")
     @use_kwargs({"name": fields.String(required=True), "age": fields.Integer()})
@@ -165,10 +175,12 @@ Adding Parameter Metadata to Operations
 ---------------------------------------
 
 The same :meth:`specargs.use_args` and :meth:`specargs.use_kwargs` methods can be used to provide metadata
-for parameters not accepted in the request body. For example::
+for parameters not accepted in the request body. For example:
+
+.. code-block:: python
 
     @app.get("/users")
-    @use_args({"name": fields.String()}, location="query") # Default 'location' is the same as the webargs parser
+    @use_args({"name": fields.String()}, location="query")  # Default 'location' is the same as the webargs parser
     def get_users(args):
         print(args["name"])
         ...
@@ -187,12 +199,14 @@ The above code snippet will result in this OpenAPI structure:
               schema:
                 type: string
 
-Adding Response Metadata/Serialization
---------------------------------------
+Adding Response Metadata
+------------------------
 
 Building on :func:`~specargs.use_args` and :func:`~specargs.use_kwargs`, **specargs** provides another decorator
 function :func:`~specargs.use_response`, which attaches response metadata to view functions/methods for use by an
-instance of :class:`specargs.WebargsAPISpec`::
+instance of :class:`specargs.WebargsAPISpec`:
+
+.. code-block:: python
 
     @dataclass
     class User:
@@ -206,9 +220,11 @@ instance of :class:`specargs.WebargsAPISpec`::
         {"id": fields.Integer(), "name": fields.String(), "age": fields.Integer()},
         description="The requested user",
     )
-    @use_response({}, status_code=HTTPStatus.NOT_FOUND) # Default status_code is HTTPStatus.OK (200)
+    @use_response({}, status_code=HTTPStatus.NOT_FOUND)  # Default status_code is HTTPStatus.OK (200)
     def get_user(user_id: int):
-        return User(id=1, name="Joe", age=24)
+        if user_id == NON_EXISTENT_USER_ID:
+            abort(404)
+        return User(id=user_id, name="Joe", age=24)
 
 This will result in the following OAS structure:
 
@@ -241,14 +257,45 @@ This will result in the following OAS structure:
                         schema:
                           type: integer
             404:
-              description:
+              description: # The default description is an empty string
 
+**specargs** also provides the convenience decorator :func:`~specargs.use_empty_response` for cases like the empty 404
+response above:
+
+.. code-block:: python
+
+    @app.get("/users/<int:user_id>")
+    @use_response(
+        {"id": fields.Integer(), "name": fields.String(), "age": fields.Integer()},
+        description="The requested user",
+    )
+    @use_empty_response(status_code=HTTPStatus.NOT_FOUND)  # An empty dictionary no longer needs to be povided
+    def get_user(user_id: int):
+        if user_id == NON_EXISTENT_USER_ID:
+            abort(404)
+        return User(id=user_id, name="Joe", age=24)
+
+This would result in the same OAS output as if :func:`~specargs.use_response` were provided an empty dictionary.
+
+Response Data Serialization
+---------------------------
 
 While :func:`~specargs.use_args` and :func:`~specargs.use_kwargs` provide request data parsing,
-:func:`~specargs.use_args` provides response data serialization based on :doc:`marshmallow <marshmallow:index>`. In the
-above example, a Flask view function returns a `User` object, but because it's decorated with
-:func:`~specargs.use_response`, the `User` object is serialized into a dictionary before being returned and
-automatically jsonified into a :func:`flask.Response` object by Flask.
+:func:`~specargs.use_response` provides response data serialization based on :doc:`marshmallow <marshmallow:index>`. In
+the code example shown in :ref:`Adding Response Metadata`, a Flask view function returns a `User` object, but because
+it's decorated with :func:`~specargs.use_response`, the `User` object is serialized into a dictionary and placed into a
+tuple, which is an acceptable return value for Flask. The underlying implementation of this serialization is dynamic so
+that the serialized output is in a form that's appropriate for the current :ref:`Active Framework`.
+
+.. note::
+
+  :func:`~specargs.use_empty_response` will not serialize view function/method return data as no serilization schema is
+  provided.
+
+Adding Extra Responses with Content
+-----------------------------------
+
+There may be times when a view function may need to explicitly return more than one kind of response with differing content and status codes.
 
 Generating an OAS File
 ----------------------
