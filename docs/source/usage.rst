@@ -115,6 +115,7 @@ functions/methods that's used by an instance of :class:`~specargs.WebargsAPISpec
 in the resulting OpenAPI specification. These decorators can be used as shown below:
 
 .. code-block:: python
+    :caption: Flask example
 
     from flask import Flask
     from specargs import use_args
@@ -123,7 +124,7 @@ in the resulting OpenAPI specification. These decorators can be used as shown be
     app = Flask(__name__, static_folder=None)
 
     @app.post("/users")
-    @use_args({"name": fields.String(), "age"}) # Must come after Flask decorator
+    @use_args({"name": fields.String(), "age": fields.Integer()}) # Must come after Flask decorator
     def post_user(args):
         print(args["name"])
         ...
@@ -142,6 +143,7 @@ in the resulting OpenAPI specification. These decorators can be used as shown be
 positional argument:
 
 .. code-block:: python
+    :caption: Flask example
 
     @app.post("/users")
     @use_kwargs({"name": fields.String(required=True), "age": fields.Integer()})
@@ -178,6 +180,7 @@ The same :meth:`specargs.use_args` and :meth:`specargs.use_kwargs` methods can b
 for parameters not accepted in the request body. For example:
 
 .. code-block:: python
+    :caption: Flask example
 
     @app.get("/users")
     @use_args({"name": fields.String()}, location="query")  # Default 'location' is the same as the webargs parser
@@ -207,6 +210,7 @@ function :func:`~specargs.use_response`, which attaches response metadata to vie
 instance of :class:`specargs.WebargsAPISpec`:
 
 .. code-block:: python
+    :caption: Flask example
 
     @dataclass
     class User:
@@ -218,19 +222,35 @@ instance of :class:`specargs.WebargsAPISpec`:
     @app.get("/users/<int:user_id>")
     @use_response(
         {"id": fields.Integer(), "name": fields.String(), "age": fields.Integer()},
-        description="The requested user",
+        description="The requested user",  # Default description is an empty string
     )
-    @use_response({}, status_code=HTTPStatus.NOT_FOUND)  # Default status_code is HTTPStatus.OK (200)
     def get_user(user_id: int):
-        if user_id == NON_EXISTENT_USER_ID:
-            abort(404)
-        return User(id=user_id, name="Joe", age=24)
+        ...
+
+
+    @app.post("/users")
+    @use_kwargs({"name": fields.String(), "age": fields.Integer()})
+    @use_response(
+        fields.String,  # Can also be provided as `fields.String(kwargs**)` if using non-default kwargs
+        status_code=HTTPStatus.CREATED,  # Default status_code is HTTPStatus.OK (200)
+    )
+    def post_user(name: str, age: int):
+        ...
 
 This will result in the following OAS structure:
 
 .. code-block:: yaml
 
     paths:
+      /users:
+        post:
+          responses:
+            201:
+              description: ""
+              content: 
+                text/html:
+                  schema:
+                    type: string
       /users/{user_id}:
         parameters:
           - in: path
@@ -256,26 +276,45 @@ This will result in the following OAS structure:
                       age:
                         schema:
                           type: integer
-            404:
-              description: # The default description is an empty string
 
-**specargs** also provides the convenience decorator :func:`~specargs.use_empty_response` for cases like the empty 404
-response above:
+Aside from :mod:`marshmallow.fields` and dictionaries of :mod:`marshmallow.fields` as shown in the example above,
+:func:`~specargs.use_response` can also accept a :class:`marshmallow.Schema` class or instance (:ref:`Schemas`), a
+:class:`specargs.in_poly.InPoly` object (:ref:`Schema Inheritance and Polymorphism`), or a
+:class:`specargs.oas.Response` (:ref:`Responses`) as its first argument. This argument determines the contents
+of the `content` block in the generated OAS structure.
+
+Adding Empty Responses
+----------------------
+
+**specargs** also provides the convenience decorator :func:`~specargs.use_empty_response` for cases like an empty 404
+response:
 
 .. code-block:: python
+    :caption: Flask example
 
     @app.get("/users/<int:user_id>")
-    @use_response(
-        {"id": fields.Integer(), "name": fields.String(), "age": fields.Integer()},
-        description="The requested user",
-    )
-    @use_empty_response(status_code=HTTPStatus.NOT_FOUND)  # An empty dictionary no longer needs to be povided
+    @use_empty_response(status_code=HTTPStatus.NOT_FOUND, description="The requested user was not found")
     def get_user(user_id: int):
         if user_id == NON_EXISTENT_USER_ID:
             abort(404)
         return User(id=user_id, name="Joe", age=24)
 
-This would result in the same OAS output as if :func:`~specargs.use_response` were provided an empty dictionary.
+This would result in the same OAS output as if :func:`~specargs.use_response` were provided an empty dictionary or
+`None` as the first argument:
+
+.. code-block:: yaml
+
+    paths:
+      /users/{user_id}:
+        parameters:
+          - in: path
+            name: user_id
+            required: true
+            type: integer
+        get:
+          responses:
+            400:
+              description: The requested user was not found
 
 Response Data Serialization
 ---------------------------
@@ -289,13 +328,172 @@ that the serialized output is in a form that's appropriate for the current :ref:
 
 .. note::
 
-  :func:`~specargs.use_empty_response` will not serialize view function/method return data as no serilization schema is
+  :func:`~specargs.use_empty_response` will not serialize view function/method return data as no serialization schema is
   provided.
 
 Adding Extra Responses with Content
 -----------------------------------
 
-There may be times when a view function may need to explicitly return more than one kind of response with differing content and status codes.
+There may be times when a view function/method may need to explicitly return more than one kind of response with
+differing content and status codes. In this case, the view function/method can be decorated with multiple
+:func:`~specargs.use_response` decorators, but as mentioned in :ref:`Response Data Serialization`, this would affect
+the serialization of the return value depending on which response schema is used:
+
+.. code-block:: python
+    :caption: Flask example
+
+    @app.post("/users/{user_id}")
+    @use_response(
+        {"id": fields.Integer(), "name": fields.String(), "age": fields.Integer()},
+        description="The requested user"
+    )
+    @use_response(
+        fields.String(),
+        description="The requested user was not found",
+        status_code=HTTPStatus.NOT_FOUND
+    )
+    def get_user(user_id: int):
+        if user_id == NON_EXISTENT_USER_ID:
+            return "The requested user was not found!", HTTPStatus.NOT_FOUND  # Needs to be handled by the second `use_response` above
+        return User(id=user_id, name="Joe", age=24)  # Should be handled by the first `use_response` above
+
+By default, the return data of a view function/method will be processed by the topmost decorator. In the example above,
+this means the first :func:`~specargs.use_response` decorator would be used to serialize the data from both of the
+return statements. In order to specify which decorator should process the return data, **specargs** provides the
+:class:`~specargs.Response` class. The a :class:`~specargs.Response` constructor accepts the return data as its first
+argument, and the intended response status as its second argument. The return data will then be processed by whichever
+decorator has a matching `status_code`:
+
+.. code-block:: python
+    :caption: Flask example
+
+    from specargs import use_response, use_empty_response, Response
+
+    @app.post("/users/{user_id}")
+    @use_response(
+        {"id": fields.Integer(), "name": fields.String(), "age": fields.Integer()},
+        description="The requested user"
+    )
+    @use_response(
+        fields.String(),
+        description="The requested user was not found",
+        status_code=HTTPStatus.NOT_FOUND
+    )
+    def get_user(user_id: int):
+        if user_id == NON_EXISTENT_USER_ID:
+            return Response("The requested user was not found!", HTTPStatus.ACCEPTED)  # Will now be handled by the second `use_response` decorator
+        return User(id=user_id, name="Joe", age=24)  # Will still be handled by the default first `use_response` decorator
+
+Reusable Components
+-------------------
+
+In OAS, certian objects (schemas, responses, etc.) are able to be defined in the top level `components` section of an
+OAS file. These defined components can then be referenced within other parts of the file to avoid repetition.
+**specargs** provides means to do the same within code.
+
+Schemas
+*******
+
+:doc:`marshmallow<marshmallow:index>` provides an analog to OAS schema objects wwith their :class:`~marshmallow.Schema`
+class. :doc:`marshmallow<marshmallow:index>` :class:`~marshmallow.Schema` objects are accepted by both
+:func:`~specargs.use_args` and :func:`~specargs.use_kwargs`, just like in :doc:`webargs<webargs:index>`. However, simply
+defining and using them in those decorators won't add them to the `components` section of the generated OAS file. In
+order to properly register a reusable schema in the OAS file, the corresponding :class:`~marshmallow.Schema` must be
+provided to the :meth:`~specargs.WebargsAPISpec.schema` method of the :class:`specargs.WebargsAPISpec` class. After
+being defined, a :class:`~marshmallow.Schema` class or instance can be provided :func:`~specargs.use_args`,
+:func:`~specargs.use_kwargs`, or :func:`~specargs.use_response` which will provide request parsing and response data
+serialization for the decorated view function/method.
+
+.. code-block:: python
+    :caption: Flask example
+
+    from marshmallow import Schema, fields, validate
+    from specargs import WebargsAPISpec
+
+    spec = WebargsAPISpec(...)
+
+
+    @spec.schema
+    class NewUserSchema(Schema):
+        name = fields.String(required=True)
+        age = fields.Integer(validator=validate.Range(min=1, max=200))
+
+
+    @spec.schema("User")
+    class ExistingUserSchema(Schema):
+        id = fields.Integer(required=True)
+        name = fields.String(required=True)
+        age = fields.Integer(validator=validate.Range(min=1, max=200))
+
+
+    @dataclass
+    class User:
+        id: int
+        name: str
+        age: int
+
+
+    @app.post("/users")
+    @use_kwargs(NewUserSchema)
+    @use_response(ExistingUserSchema, description="The newly created user", status_code=HTTPStatus.CREATED)
+    def post_user(name: str, age: int):
+        return User(1, "Joe", 25)
+
+The above code will result in the following OAS output:
+
+.. code-block:: yaml
+
+    components:
+      schemas:
+        NewUser:
+          type: object
+          properties:
+            name:
+              type: string
+            age:
+              type: integer
+              minimum: 1
+              maximum: 200
+          required:
+            - name
+        User:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            age:
+              type: integer
+              minimum: 1
+              maximum: 200
+          required:
+            - id
+            - name
+    paths:
+      /users:
+        post:
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/NewUser'
+            required: true
+          responses:
+            '201':
+              description: The newly created user
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/User'
+
+Responses
+*********
+
+**specargs** provides the :class:`specargs.oas.Response` class to generate reusable response components.
+
+Schema Inheritance and Polymorphism
+-----------------------------------
 
 Generating an OAS File
 ----------------------

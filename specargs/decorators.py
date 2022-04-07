@@ -73,7 +73,7 @@ def _dump_response_schema(obj: Any, schema: Optional[Union[Schema, InPoly, field
 
 
 def use_response(
-    response_or_argpoly: Optional[Union[Response, Union[ArgMap, InPoly]]],
+    response_or_argpoly: Optional[Union[Response, Union[fields.Field, ArgMap, InPoly]]],
     *,
     status_code: Union[HTTPStatus, int] = HTTPStatus.OK,
     description: str = "",
