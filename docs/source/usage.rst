@@ -280,7 +280,7 @@ This will result in the following OAS structure:
 Aside from :mod:`marshmallow.fields` and dictionaries of :mod:`marshmallow.fields` as shown in the example above,
 :func:`~specargs.use_response` can also accept a :class:`marshmallow.Schema` class or instance (:ref:`Schemas`), a
 :class:`specargs.in_poly.InPoly` object (:ref:`Schema Inheritance and Polymorphism`), or a
-:class:`specargs.oas.Response` (:ref:`Responses`) as its first argument. This argument determines the contents
+:class:`specargs.Response` (:ref:`Responses`) as its first argument. This argument determines the contents
 of the `content` block in the generated OAS structure.
 
 Adding Empty Responses
@@ -362,14 +362,14 @@ the serialization of the return value depending on which response schema is used
 By default, the return data of a view function/method will be processed by the topmost decorator. In the example above,
 this means the first :func:`~specargs.use_response` decorator would be used to serialize the data from both of the
 return statements. In order to specify which decorator should process the return data, **specargs** provides the
-:class:`~specargs.Response` class. The a :class:`~specargs.Response` constructor accepts the return data as its first
+:class:`~specargs.ViewResponse` class. The a :class:`~specargs.ViewResponse` constructor accepts the return data as its first
 argument, and the intended response status as its second argument. The return data will then be processed by whichever
 decorator has a matching `status_code`:
 
 .. code-block:: python
     :caption: Flask example
 
-    from specargs import use_response, use_empty_response, Response
+    from specargs import use_response, use_empty_response, ViewResponse
 
     @app.post("/users/{user_id}")
     @use_response(
@@ -384,7 +384,7 @@ decorator has a matching `status_code`:
     def get_user(user_id: int):
         if user_id == NON_EXISTENT_USER_ID:
             # Will now be handled by the second `use_response` decorator
-            return Response("The requested user was not found!", HTTPStatus.ACCEPTED)
+            return ViewResponse("The requested user was not found!", HTTPStatus.ACCEPTED)
         # Will still be handled by the default first `use_response` decorator
         return User(id=user_id, name="Joe", age=24)
 
@@ -494,19 +494,18 @@ The above code will result in the following OAS output:
 Responses
 *********
 
-**specargs** provides the :class:`specargs.oas.Response` class to generate reusable response components. An instance of
+**specargs** provides the :class:`~specargs.Response` class to generate reusable response components. An instance of
 this class can be provided to multiple :func:`~specargs.use_response` decorators, reducing repetition when defining view
-functions/methods with the same response metadata. However, instantiating a :class:`~specargs.oas.Response` object with
+functions/methods with the same response metadata. However, instantiating a :class:`~specargs.Response` object with
 its constructor does not automatically register it as a reusable response component. To accomplish this, the
-:class:`~specargs.oas.Response` instance can be provided to the :meth:`~specargs.WebargsAPISpec.response` method of the
+:class:`~specargs.Response` instance can be provided to the :meth:`~specargs.WebargsAPISpec.response` method of the
 :class:`~specargs.WebargsAPISpec` class, which will register a corresponding response object in the `components` section
 of the generated OAS output.
 
 .. code-block:: python
 
     from marshmallow import Schema, fields
-    from specargs import WebargsAPISpec
-    from specargs.oas import Response
+    from specargs import WebargsAPISpec, Response
 
     spec = WebargsAPISpec(...)
 
@@ -520,16 +519,17 @@ of the generated OAS output.
     spec.response("UserResponse", user_response)
 
 Alternatively, it's possible to combine the steps of construction and registration by using the
-:meth:`specargs.WebargsAPISpec.response` method as a :class:`specargs.oas.Response` factory. After its first argument
+:meth:`specargs.WebargsAPISpec.response` method as a :class:`~specargs.Response` factory. After its first argument
 :meth:`specargs.WebargsAPISpec.response` is able to accept any arguments and keyword arguments that would be provided to
-the :class:`specargs.oas.Response` constructor:
+the :class:`~specargs.Response` constructor:
 
 .. code-block:: python
 
-    # Importing 'Response' from 'specargs.oas' is no longer needed
+    # Importing 'Response' from 'specargs' is no longer needed
     user_response = spec.response("UserResponse", UserSchema, description="A user")
 
-Once a :class:`specargs.oas.Response` object is created, it can then be provided to the :func:`~specargs.use_response` decorator:
+Once a :class:`~specargs.Response` object is created, it can then be provided to the :func:`~specargs.use_response`
+decorator:
 
 .. code-block:: python
     :caption: Flask example

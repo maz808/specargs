@@ -6,10 +6,10 @@ from marshmallow import Schema
 from webargs import fields
 
 from .common import ArgMap, Webargs
-from .response import Response
+from .view_response import ViewResponse
 from .framework import parser, make_response
 from .in_poly import InPoly
-from .oas import ensure_response
+from .oas import ensure_response, Response
 
 
 def use_args(argpoly: Union[ArgMap, InPoly], *args, location: str = parser.DEFAULT_LOCATION, **kwargs) -> Callable[..., Callable]:
@@ -60,7 +60,7 @@ class UnregisteredResponseCodeError(Exception):
 
 
 def _get_response_data_and_status(data: Any, default_status: HTTPStatus) -> Tuple[Any, HTTPStatus]:
-    if isinstance(data, Response):
+    if isinstance(data, ViewResponse):
         return data.data, data.status_code
     return data, default_status
 

@@ -5,7 +5,7 @@ from attrs import define, field
 
 
 @define
-class Response:
+class ViewResponse:
     '''An object used for specifying the data and status code returned by a view function/method
     
     This class should be used when returning a non-default status code from a view function/method.

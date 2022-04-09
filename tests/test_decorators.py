@@ -72,10 +72,10 @@ def test_use_kwargs(mocker: MockerFixture):
     assert decorator == use_args.return_value
 
 
-@pytest.mark.parametrize("data", (decorators.Response("data", 404), "data"))
+@pytest.mark.parametrize("data", (decorators.ViewResponse("data", 404), "data"))
 def test_get_response_data_and_status(data: Any):
     default_status = HTTPStatus.CREATED
-    if isinstance(data, decorators.Response): expected_data, expected_status = data.data, data.status_code
+    if isinstance(data, decorators.ViewResponse): expected_data, expected_status = data.data, data.status_code
     else: expected_data, expected_status = data, default_status
 
     resp_data, resp_status = decorators._get_response_data_and_status(data, default_status)

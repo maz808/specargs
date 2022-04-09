@@ -50,13 +50,13 @@ Schema Inheritance/Polymorphism
 Response Construction
 ---------------------
 
-.. autoclass:: specargs.Response
+.. autoclass:: specargs.ViewResponse
    :exclude-members: __new__
 
 Reusable OAS Components
 -----------------------
 
-.. autoclass:: specargs.oas.Response
+.. autoclass:: specargs.Response
    :members:
 
 Exceptions
