@@ -490,7 +490,109 @@ The above code will result in the following OAS output:
 Responses
 *********
 
-**specargs** provides the :class:`specargs.oas.Response` class to generate reusable response components.
+**specargs** provides the :class:`specargs.oas.Response` class to generate reusable response components. An instance of
+this class can be provided to multiple :func:`~specargs.use_response` decorators, reducing repetition when defining view
+functions/methods with the same response metadata. However, instantiating a :class:`~specargs.oas.Response` object with
+its constructor does not automatically register it as a reusable response component. To accomplish this, the
+:class:`~specargs.oas.Response` instance can be provided to the :meth:`~specargs.WebargsAPISpec.response` method of the
+:class:`~specargs.WebargsAPISpec` class, which will register a corresponding response object in the `components` section
+of the generated OAS output.
+
+.. code-block:: python
+
+    from marshmallow import Schema, fields
+    from specargs import WebargsAPISpec
+    from specargs.oas import Response
+
+    spec = WebargsAPISpec(...)
+
+    class UserSchema(Schema):
+        id = fields.Integer()
+        name = fields.String()
+        age = fields.Integer()
+
+    user_response = Response(UserSchema, description="A user")
+
+    spec.response("UserResponse", user_response)
+
+Alternatively, it's possible to combine the steps of construction and registration by using the
+:meth:`specargs.WebargsAPISpec.response` method as a :class:`specargs.oas.Response` factory. After its first argument
+:meth:`specargs.WebargsAPISpec.response` is able to accept any arguments and keyword arguments that would be provided to
+the :class:`specargs.oas.Response` constructor:
+
+.. code-block:: python
+
+    # Importing 'Response' from 'specargs.oas' is no longer needed
+    user_response = spec.response("UserResponse", UserSchema, description="A user")
+
+Once a :class:`specargs.oas.Response` object is created, it can then be provided to the :func:`~specargs.use_response` decorator:
+
+.. code-block:: python
+    :caption: Flask example
+
+    # After `user_response` has been created using one of the methods shown above
+
+    @app.get("/users/<int:user_id>")
+    @use_response(user_response)
+    def get_user(user_id: int):
+        ...
+
+    @app.post("/users")
+    @use_kwargs({"name": fields.String(), "age": fields.Integer()})
+    @user_response(user_response, status_code=HTTPStatus.CREATED)
+    def post_user(name: str, age: int):
+        ...
+
+The resulting OAS output would be:
+
+.. code-block:: yaml
+
+    components:
+      schemas:
+        User:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            age:
+              type: integer
+      responses:
+        UserResponse:
+          description: A user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    paths:
+      /users:
+        post:
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    age:
+                      type: integer
+            required: true
+          responses:
+            '201':
+              $ref: '#/components/responses/UserResponse'
+      /users/{user_id}:
+        parameters:
+          - in: path
+            name: user_id
+            required: true
+            schema:
+              type: integer
+        get:
+          respones:
+            '200':
+              $ref: '#/components/responses/UserResponse'
 
 Schema Inheritance and Polymorphism
 -----------------------------------
