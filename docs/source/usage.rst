@@ -27,7 +27,7 @@ is currently not supported. If only one is detected, that framework is set as th
 Initializing a Specification
 ----------------------------
 
-Generating a specification is accomplished similarly to apispec. A :class:`~specargs.WebargsAPISpec` must
+Generating a specification is accomplished similarly to :doc:`apispec<apispec:index>`. A :class:`~specargs.WebargsAPISpec` must
 be instantiated and provided an instance of :class:`~specargs.WebargsPlugin` using the `plugins`
 keyword argument:
 
@@ -75,8 +75,8 @@ For example, paths and operations can be generated from a Flask application like
 Adding Path Parameter Metadata
 ------------------------------
 
-When a `framework_obj` is passed to the :meth:`~specargs.WebargsAPISpec.create_paths`, view functions/methods and
-thier corresponding url routing rules are extracted. These url rules are then converted into path parameter metadata for
+When a `framework_obj` is passed to the :meth:`~specargs.WebargsAPISpec.create_paths` method, view functions/methods and
+their corresponding url routing rules are extracted from ths object. These url rules are then converted into path parameter metadata for
 the generated paths of the output OpenAPI specification. Using Flask, for example:
 
 .. code-block:: python
@@ -111,7 +111,7 @@ Adding Request Body Metadata to Operations
 As **specargs** is intended to provide a thin wrapper around :doc:`webargs:index`, it also provides
 :func:`~specargs.use_args` and :func:`~specargs.use_kwargs` decorator functions.  On top of the
 functionality they provide in :doc:`webargs:index`, these decorators also attach metadata onto decorated view
-functions/methods that's used by an instance of :class:`~specargs.WebargsAPISpec` to generate parameter metadata
+functions/methods. This metadata can then be used by an instance of :class:`~specargs.WebargsAPISpec` to generate parameter metadata
 in the resulting OpenAPI specification. These decorators can be used as shown below:
 
 .. code-block:: python
@@ -129,7 +129,7 @@ in the resulting OpenAPI specification. These decorators can be used as shown be
         print(args["name"])
         ...
 
-    # If using class-based views, you can decorated view methods instead
+    # If using class-based views, methods can be decorated instead
     from flask.view import MethodView
 
     class Users(MethodView):
@@ -354,8 +354,10 @@ the serialization of the return value depending on which response schema is used
     )
     def get_user(user_id: int):
         if user_id == NON_EXISTENT_USER_ID:
-            return "The requested user was not found!", HTTPStatus.NOT_FOUND  # Needs to be handled by the second `use_response` above
-        return User(id=user_id, name="Joe", age=24)  # Should be handled by the first `use_response` above
+            # Needs to be handled by the second `use_response` above
+            return "The requested user was not found!", HTTPStatus.NOT_FOUND
+        # Should be handled by the first `use_response` above
+        return User(id=user_id, name="Joe", age=24)
 
 By default, the return data of a view function/method will be processed by the topmost decorator. In the example above,
 this means the first :func:`~specargs.use_response` decorator would be used to serialize the data from both of the
@@ -381,8 +383,10 @@ decorator has a matching `status_code`:
     )
     def get_user(user_id: int):
         if user_id == NON_EXISTENT_USER_ID:
-            return Response("The requested user was not found!", HTTPStatus.ACCEPTED)  # Will now be handled by the second `use_response` decorator
-        return User(id=user_id, name="Joe", age=24)  # Will still be handled by the default first `use_response` decorator
+            # Will now be handled by the second `use_response` decorator
+            return Response("The requested user was not found!", HTTPStatus.ACCEPTED)
+        # Will still be handled by the default first `use_response` decorator
+        return User(id=user_id, name="Joe", age=24)
 
 Reusable Components
 -------------------
@@ -596,6 +600,11 @@ The resulting OAS output would be:
 
 Schema Inheritance and Polymorphism
 -----------------------------------
+
+In OAS, schema inheritance and polymorphism is accomplished using the `oneOf`, `anyOf`, and `allOf` keywords. In order
+to match the features of OAS, **specargs** provides the :class:`~specargs.OneOf`, :class:`~specargs.AnyOf`, and
+:class:`~specargs.AllOf` classes which all inherit from the :class:`specargs.in_poly.InPoly` class. These classes can
+be used in all places where a dictionary of :mod:`marshmallow.fields` or a :class:`marshmallow.Schema` can be used.
 
 Generating an OAS File
 ----------------------
