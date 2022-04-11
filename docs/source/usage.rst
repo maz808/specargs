@@ -362,8 +362,8 @@ the serialization of the return value depending on which response schema is used
 By default, the return data of a view function/method will be processed by the topmost decorator. In the example above,
 this means the first :func:`~specargs.use_response` decorator would be used to serialize the data from both of the
 return statements. In order to specify which decorator should process the return data, **specargs** provides the
-:class:`~specargs.ViewResponse` class. The a :class:`~specargs.ViewResponse` constructor accepts the return data as its first
-argument, and the intended response status as its second argument. The return data will then be processed by whichever
+:class:`~specargs.ViewResponse` class. The :class:`~specargs.ViewResponse` constructor accepts the return data as its first
+argument and the intended response status as its second argument. The return data will then be processed by whichever
 decorator has a matching `status_code`:
 
 .. code-block:: python
@@ -494,13 +494,15 @@ The above code will result in the following OAS output:
 Responses
 *********
 
-**specargs** provides the :class:`~specargs.Response` class to generate reusable response components. An instance of
-this class can be provided to multiple :func:`~specargs.use_response` decorators, reducing repetition when defining view
-functions/methods with the same response metadata. However, instantiating a :class:`~specargs.Response` object with
-its constructor does not automatically register it as a reusable response component. To accomplish this, the
-:class:`~specargs.Response` instance can be provided to the :meth:`~specargs.WebargsAPISpec.response` method of the
+**specargs** provides the :class:`~specargs.Response` class to generate reusable response components. Instead of
+defining response metadata directly within the :func:`~specargs.use_response` decorator, this metatdata can be defined
+within the :class:`~specargs.Response` constructor. The resulting :class:`~specargs.Response` object can then be
+provided to multiple :func:`~specargs.use_response` decorators, reducing repetition when defining view functions/methods
+with the same response metadata. However, instantiating a :class:`~specargs.Response` object with its constructor does
+not automatically register it as a reusable response component. To accomplish this, the :class:`~specargs.Response`
+instance can be provided to the :meth:`~specargs.WebargsAPISpec.response` method of the
 :class:`~specargs.WebargsAPISpec` class, which will register a corresponding response object in the `components` section
-of the generated OAS output.
+of the generated OAS output:
 
 .. code-block:: python
 
@@ -516,11 +518,12 @@ of the generated OAS output.
 
     user_response = Response(UserSchema, description="A user")
 
+    # The first argument is the desired name of the response object within the OAS output
     spec.response("UserResponse", user_response)
 
 Alternatively, it's possible to combine the steps of construction and registration by using the
-:meth:`specargs.WebargsAPISpec.response` method as a :class:`~specargs.Response` factory. After its first argument
-:meth:`specargs.WebargsAPISpec.response` is able to accept any arguments and keyword arguments that would be provided to
+:meth:`specargs.WebargsAPISpec.response` method as a :class:`~specargs.Response` factory. After its first argument,
+:meth:`~specargs.WebargsAPISpec.response` is able to accept any arguments and keyword arguments that would be provided to
 the :class:`~specargs.Response` constructor:
 
 .. code-block:: python
@@ -534,7 +537,7 @@ decorator:
 .. code-block:: python
     :caption: Flask example
 
-    # After `user_response` has been created using one of the methods shown above
+    # After a `Response` object named `user_response` has been created
 
     @app.get("/users/<int:user_id>")
     @use_response(user_response)
@@ -604,7 +607,273 @@ Schema Inheritance and Polymorphism
 In OAS, schema inheritance and polymorphism is accomplished using the `oneOf`, `anyOf`, and `allOf` keywords. In order
 to match the features of OAS, **specargs** provides the :class:`~specargs.OneOf`, :class:`~specargs.AnyOf`, and
 :class:`~specargs.AllOf` classes which all inherit from the :class:`specargs.in_poly.InPoly` class. These classes can
-be used in all places where a dictionary of :mod:`marshmallow.fields` or a :class:`marshmallow.Schema` can be used.
+be used in all **specargs** functions and methods where a dictionary of :mod:`marshmallow.fields` or a
+:class:`marshmallow.Schema` class or instance can be provided. Before the explanation and examples of how each of these
+:class:`~specargs.in_poly.InPoly` subclasses can be used, let the following dataclasses and schemas be defined:
+
+.. code-block:: python
+
+    from dataclass import dataclass
+    from marshmallow import Schema, fields
+    from specargs import WebargsAPISpec
+
+    spec = WebargsAPISpec(...)
+
+    @dataclass
+    class Spoon:
+        volume: float
+
+    @dataclass
+    class Fork:
+        prongs: int
+
+    @dataclass
+    class Spork:
+        volume: float
+        prongs: int
+    
+    @dataclass
+    class Knife:
+        serrated: bool
+
+    @spec.schema
+    class SpoonSchema(Schema):
+        volume = fields.Float()
+
+    @spec.schema
+    class ForkSchema(Schema):
+        prongs = fields.Integer()
+
+The schemas defined above will generate the following OAS components:
+
+.. code-block:: yaml
+
+    components:
+      schemas:
+        Spoon:
+          type: object
+          properties:
+            volume:
+              type: number
+        Fork:
+          type: object
+          properties:
+            prongs:
+              type: integer
+
+OneOf
+*****
+
+The :class:`~specargs.OneOf` class can be used to define request/response metadata with multiple object schemas, only
+one of which should successfully validate the given data. The schemas can be provided as :class:`marshmallow.Schema`
+classes or instances:
+
+.. code-block:: python
+    :caption: Flask example
+
+    from specargs import use_args, use_response, use_empty_response, OneOf
+
+    @app.post("/utensils")
+    @use_args(OneOf(SpoonSchema(), ForkSchema))
+    @use_empty_response(description="A new utensil was successfully posted", status_code=HTTPStatus.CREATED)
+    def post_utensil(args: dict):
+        # At this point we have a dictionary that either has the attributes of Spoon or the attributes of Fork
+        # It may be useful to add `post_load` methods to both Schemas so that the resulting `args` object is a Fork or
+        # Spoon instead of a dictionary
+        ...
+
+    @app.get("/utensils/<int:utensil_id>")
+    @use_response(OneOf(SpoonSchema, ForkSchema()), description="The requested utensil")
+    def get_utensil(utensil_id: int):
+        ...  # Steps that lead to returning a Spoon
+            return Spoon(volume=14.8)  # Valid against only SpoonSchema (CORRECT)
+        ...  # Steps that lead to returning a Fork
+            return Fork(prongs=3)  # Valid against only ForkSchema (CORRECT)
+        ...  # Steps that lead to returning a Spork
+            return Spork(volume=13.2, prongs=4)  # Valid against both schemas (ERROR)
+        ...  # Steps that lead to returning a Knife
+            return Knife(serrated=True)  # Valid against neither schema (ERROR)
+
+When parsing request data or serializing response data, using :class:`~specargs.OneOf` will raise an error if the data
+is valid for more than one of the provided schemas or if the data is invalid against all provided schemas. The above
+code will result in the following OAS output:
+
+.. code-block:: yaml
+
+    paths:
+      /utensils:
+        post:
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  oneOf:
+                    - $ref: '#/components/schemas/Spoon'
+                    - $ref: '#/components/schemas/Fork'
+          responses:
+            '201':
+              description: A new utensil was successfully posted
+      /utensils/{utensil_id}:
+        parameters:
+          - in: path
+            name: utensil_id
+            required: true
+            schema:
+              type: integer
+        get:
+          responses:
+            '200':
+              description: The requested utensil
+              content:
+                application/json:
+                  schema:
+                    oneOf:
+                      - $ref: '#/components/schemas/Spoon'
+                      - $ref: '#/components/schemas/Fork'
+
+AnyOf
+*****
+
+The :class:`~specargs.AnyOf` class can be used to define request/response metadata with multiple object schemas,
+multiple of which could successfully validate the given data. The schemas can be provided as :class:`marshmallow.Schema`
+classes or instances:
+
+.. code-block:: python
+    :caption: Flask example
+
+    from specargs import use_args, use_response, use_empty_response, OneOf
+
+    @app.post("/utensils")
+    @use_args(AnyOf(SpoonSchema(), ForkSchema))
+    @use_empty_response(description="A new utensil was successfully posted", status_code=HTTPStatus.CREATED)
+    def post_utensil(args: dict):
+        # At this point we have a dictionary that has either the attributes of Spoon, the attributes of Fork, or both
+        # Schemas with `post_load` methods that return non-dictionary objects will still output a dictionary
+        ...
+
+    @app.get("/utensils/<int:utensil_id>")
+    @use_response(AnyOf(SpoonSchema, ForkSchema()), description="The requested utensil")
+    def get_utensil(utensil_id: int):
+        ...  # Steps that lead to returning a Spoon
+            return Spoon(volume=14.8)  # Valid against only SpoonSchema (CORRECT)
+        ...  # Steps that lead to returning a Fork
+            return Fork(prongs=3)  # Valid against only ForkSchema (CORRECT)
+        ...  # Steps that lead to returning a Spork
+            return Spork(volume=13.2, prongs=4)  # Valid against both schemas (CORRECT)
+        ...  # Steps that lead to returning a Knife
+            return Knife(serrated=True)  # Valid against neither schema (ERROR)
+
+When parsing request data or serializing response data, using :class:`~specargs.AnyOf` will raise an error if the data
+is invalid against all of the provided schemas. The above code will result in the following OAS output:
+
+.. code-block:: yaml
+
+    paths:
+      /utensils:
+        post:
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  anyOf:
+                    - $ref: '#/components/schemas/Spoon'
+                    - $ref: '#/components/schemas/Fork'
+          responses:
+            '201':
+              description: A new utensil was successfully posted
+      /utensils/{utensil_id}:
+        parameters:
+          - in: path
+            name: utensil_id
+            required: true
+            schema:
+              type: integer
+        get:
+          responses:
+            '200':
+              description: The requested utensil
+              content:
+                application/json:
+                  schema:
+                    anyOf:
+                      - $ref: '#/components/schemas/Spoon'
+                      - $ref: '#/components/schemas/Fork'
+
+Using :class:`~specargs.AnyOf` for request parsing and response serialization will also raise an error if the provided
+schemas result in differing values for any given key after parsing or serialization. For example, cases in which the
+provided schemas contain fields with matching names but differing types will raise an error.
+
+AllOf
+*****
+
+The :class:`~specargs.AllOf` class can be used to define request/response metadata with multiple object schemas, all of
+which should successfully validate the given data. The schemas can be provided as :class:`marshmallow.Schema` classes or
+instances:
+
+.. code-block:: python
+    :caption: Flask example
+
+    from specargs import use_args, use_response, use_empty_response, OneOf
+
+    @app.post("/utensils")
+    @use_args(AllOf(SpoonSchema(), ForkSchema))
+    @use_empty_response(description="A new utensil was successfully posted", status_code=HTTPStatus.CREATED)
+    def post_utensil(args: dict):
+        # At this point we have a dictionary that has the attributes of Spoon and the attributes of Fork
+        # Schemas with `post_load` methods that return non-dictionary objects will still output a dictionary
+        ...
+
+    @app.get("/utensils/<int:utensil_id>")
+    @use_response(AnyOf(SpoonSchema, ForkSchema()), description="The requested utensil")
+    def get_utensil(utensil_id: int):
+        ...  # Steps that lead to returning a Spoon
+            return Spoon(volume=14.8)  # Valid against only SpoonSchema (ERROR)
+        ...  # Steps that lead to returning a Fork
+            return Fork(prongs=3)  # Valid against only ForkSchema (ERROR)
+        ...  # Steps that lead to returning a Spork
+            return Spork(volume=13.2, prongs=4)  # Valid against both schemas (CORRECT)
+        ...  # Steps that lead to returning a Knife
+            return Knife(serrated=True)  # Valid against neither schema (ERROR)
+
+When parsing request data or serializing response data, using :class:`~specargs.AnyOf` will raise an error if the data
+is invalid against any of the provided schemas. The above code will result in the following OAS output:
+
+.. code-block:: yaml
+
+    paths:
+      /utensils:
+        post:
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  allOf:
+                    - $ref: '#/components/schemas/Spoon'
+                    - $ref: '#/components/schemas/Fork'
+          responses:
+            '201':
+              description: A new utensil was successfully posted
+      /utensils/{utensil_id}:
+        parameters:
+          - in: path
+            name: utensil_id
+            required: true
+            schema:
+              type: integer
+        get:
+          responses:
+            '200':
+              description: The requested utensil
+              content:
+                application/json:
+                  schema:
+                    allOf:
+                      - $ref: '#/components/schemas/Spoon'
+                      - $ref: '#/components/schemas/Fork'
+
+Using :class:`~specargs.AllOf` for request parsing and response serialization will also raise an error if the provided
+schemas result in differing values for any given key after parsing or serialization. For example, cases in which the
+provided schemas contain fields with matching names but differing types will raise an error.
 
 Generating an OAS File
 ----------------------

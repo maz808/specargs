@@ -4,7 +4,7 @@ from typing import Optional
 from attrs import define
 from flask import abort
 from flask.views import MethodView
-from marshmallow import Schema
+from marshmallow import Schema, post_load
 from webargs import fields
 
 from specargs import use_response, use_kwargs, AnyOf, use_empty_response, Response
@@ -15,21 +15,31 @@ from ..spec import spec
 @define
 class Example:
     id: int
-    name: str
-    req: str = "nice"
+    req: str
+    name: str = "name"
     # other_req: str = "other nice"
     # another_req: str = "another nice"
     # sub: Optional["Example"] = None
     # test: str = "wow"
 
 
+@define
+class Other:
+    id: int
+    other_req: str
+    name: str = "name"
+    test: str = "test"
+
+
 @spec.schema("Example")
 class ExampleSchema(Schema):
-    id = fields.Int()
-    name = fields.Str()
-    sub = fields.Nested("ExampleSchema", allow_none=True)
+    id = fields.Int(required=True)
     req = fields.String(required=True)
-    ex_list = fields.List(fields.String)
+    name = fields.Str()
+
+    @post_load
+    def make_example(self, data, **kwargs):
+        return Example(**data)
 
 
 @spec.schema("Other")
@@ -38,6 +48,10 @@ class OtherSchema(Schema):
     name = fields.String()
     test = fields.Str()
     other_req = fields.Str(required=True)
+
+    @post_load
+    def make_other(self, data, **kwargs):
+        return Other(**data)
 
 
 @spec.schema("AnotherOneButWithAWeirdName")
