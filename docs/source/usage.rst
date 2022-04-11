@@ -835,7 +835,7 @@ instances:
         ...  # Steps that lead to returning a Knife
             return Knife(serrated=True)  # Valid against neither schema (ERROR)
 
-When parsing request data or serializing response data, using :class:`~specargs.AnyOf` will raise an error if the data
+When parsing request data or serializing response data, using :class:`~specargs.AllOf` will raise an error if the data
 is invalid against any of the provided schemas. The above code will result in the following OAS output:
 
 .. code-block:: yaml

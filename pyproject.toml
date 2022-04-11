@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "specargs"
 version = "0.1.0"
-description = "A library for request and response parsing and serialization and OpenAPI Specification file generation"
-authors = ["maz808 <mzamora808@gmail.com>"]
+description = "A library for request parsing and response serialization that generates OpenAPI Specification files"
+authors = ["Manuel Zamora <mzamora808@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
