@@ -222,6 +222,9 @@ class AnyOf(InPoly):
         for schema in self.schemas:
             try: load = schema.load(get_request_body(request), unknown=EXCLUDE)
             except ValidationError: continue
+            if not isinstance(load, dict):
+                load = vars(load) if hasattr(load, "__dict__") else {s: getattr(load, s, None) for s in load.__slots__}
+
             valid_schema_loads[schema] = load
 
         if len(valid_schema_loads) == 0:
@@ -325,7 +328,15 @@ class AllOf(InPoly):
             :exc:`AllOfValidationError`: If any of :attr:`AllOf.schemas` don't succesfully validate the request data
         '''
         try:
-            schema_loads = {schema: schema.load(get_request_body(request), unknown=EXCLUDE) for schema in self.schemas}
+            schema_loads = {}
+            for schema in self.schemas:
+                load = schema.load(get_request_body(request), unknown=EXCLUDE)
+                if not isinstance(load, dict):
+                    load = (
+                        vars(load) if hasattr(load, "__dict__") else
+                        {s: getattr(load, s, None) for s in load.__slots__}
+                    )
+                schema_loads[schema] = load
         except ValidationError as e:
             raise AllOfValidationError(
                 f"Request data is invalid for a Schema in "
