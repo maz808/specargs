@@ -1,6 +1,9 @@
 # Python
 __pycache__/
 
+#Pyenv
+.python-version
+
 # Coverage
 .coverage
 

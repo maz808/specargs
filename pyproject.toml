@@ -2,27 +2,25 @@
 name = "specargs"
 version = "0.1.0"
 description = "A library for request parsing and response serialization that generates OpenAPI Specification files"
+repository = "https://github.com/maz808/specargs"
+license = "MIT"
+keywords = ["OpenAPI", "Flask", "webargs", "marshmallow", "Generator"]
 authors = ["Manuel Zamora <mzamora808@gmail.com>"]
+classifiers = [
+    "Intended Audience :: Developers"
+]
+readme = "README.md"
+packages = [
+    {include = "specargs"}
+]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.7"
 apispec = {extras = ["marshmallow", "yaml"], version = "^5.1.1"}
 webargs = "^8.1.0"
-python-dotenv = "^0.19.2"
 apispec-webframeworks = "^0.5.2"
 attrs = "^21.4.0"
 cattrs = "^1.10.0"
-
-Sphinx = {version = "^4.4.0", optional = true}
-sphinx-book-theme = {version = "^0.2.0", optional = true}
-Flask = {version = "^2.0.3", optional = true}
-Flask-Cors = {version = "^3.0.10", optional = true}
-Django = {version = "^4.0.3", optional = true}
-
-[tool.poetry.extras]
-docs = ["Sphinx", "sphinx-book-theme"]
-flask = ["Flask", "Flask-Cors"]
-django = ["Django"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
